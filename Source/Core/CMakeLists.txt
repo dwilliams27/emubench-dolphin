@@ -7,6 +7,9 @@ add_subdirectory(UICommon)
 add_subdirectory(VideoCommon)
 add_subdirectory(VideoBackends)
 
+# [dmcp]
+add_subdirectory(IPC)
+
 if(ENABLE_NOGUI)
   add_subdirectory(DolphinNoGUI)
 endif()

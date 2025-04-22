@@ -91,6 +91,9 @@
 #include "VideoCommon/VideoBackendBase.h"
 #include "VideoCommon/VideoEvents.h"
 
+// [dmcp]
+#include "IPC/HTTPServer.h"
+
 namespace Core
 {
 static bool s_wants_determinism;
@@ -253,6 +256,13 @@ bool Init(Core::System& system, std::unique_ptr<BootParameters> boot, const Wind
   // Start the emu thread
   s_state.store(State::Starting);
   s_emu_thread = std::thread(EmuThread, std::ref(system), std::move(boot), prepared_wsi);
+
+  // [dmcp] Start IPC server
+  if (!IPC::HTTPServer::GetInstance().Start(58008)) {
+    ERROR_LOG_FMT(COMMON, "Failed to start IPC server");
+  } else {
+    ERROR_LOG_FMT(COMMON, "IPC server initialized on port 58008");
+  }
   return true;
 }
 
