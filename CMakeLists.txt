@@ -769,6 +769,11 @@ if (USE_RETRO_ACHIEVEMENTS)
 endif()
 
 ########################################
+# [DMCP]
+add_subdirectory(Externals/cpp-httplib)
+add_subdirectory(Externals/json)
+
+########################################
 # Pre-build events: Define configuration variables and write SCM info header
 #
 
