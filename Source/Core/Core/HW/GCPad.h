@@ -25,6 +25,10 @@ bool IsInitialized();
 
 InputConfig* GetConfig();
 
+// [dmcp]
+void UpdateControllerStateFromHTTP(int pad_num, const GCPadStatus& status);
+void EnableHTTPController(int pad_num, bool enabled);
+
 GCPadStatus GetStatus(int pad_num);
 ControllerEmu::ControlGroup* GetGroup(int pad_num, PadGroup group);
 void Rumble(int pad_num, ControlState strength);

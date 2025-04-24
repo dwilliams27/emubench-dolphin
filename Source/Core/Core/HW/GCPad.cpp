@@ -4,6 +4,8 @@
 #include "Core/HW/GCPad.h"
 
 #include <cstring>
+#include <mutex>
+#include <optional>
 
 #include "Common/Common.h"
 #include "Core/HW/GCPadEmu.h"
@@ -15,6 +17,38 @@
 namespace Pad
 {
 static InputConfig s_config("GCPadNew", _trans("Pad"), "GCPad", "Pad");
+
+// Structure to hold HTTP controller input data
+struct HTTPControllerState
+{
+  std::mutex mutex;
+  std::optional<GCPadStatus> status;
+  bool enabled = true;
+};
+
+// Global instance of HTTP controller state for each pad
+static std::array<HTTPControllerState, 4> s_http_controllers;
+
+// Function to update controller state from HTTP input
+void UpdateControllerStateFromHTTP(int pad_num, const GCPadStatus& status)
+{
+  if (pad_num < 0 || pad_num >= 4)
+    return;
+
+  std::lock_guard<std::mutex> lock(s_http_controllers[pad_num].mutex);
+  s_http_controllers[pad_num].status = status;
+}
+
+// Function to enable/disable HTTP controller input
+void EnableHTTPController(int pad_num, bool enabled)
+{
+  if (pad_num < 0 || pad_num >= 4)
+    return;
+
+  std::lock_guard<std::mutex> lock(s_http_controllers[pad_num].mutex);
+  s_http_controllers[pad_num].enabled = enabled;
+}
+
 InputConfig* GetConfig()
 {
   return &s_config;
@@ -58,6 +92,16 @@ bool IsInitialized()
 
 GCPadStatus GetStatus(int pad_num)
 {
+  // [dmcp]
+  if (pad_num >= 0 && pad_num < 4)
+  {
+    std::lock_guard<std::mutex> lock(s_http_controllers[pad_num].mutex);
+    if (s_http_controllers[pad_num].enabled && s_http_controllers[pad_num].status.has_value())
+    {
+      return *s_http_controllers[pad_num].status;
+    }
+  }
+
   return static_cast<GCPad*>(s_config.GetController(pad_num))->GetInput();
 }
 
