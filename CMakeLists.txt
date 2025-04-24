@@ -719,12 +719,13 @@ dolphin_find_optional_system_library(MBEDTLS Externals/mbedtls 2.28)
 
 dolphin_find_optional_system_library(CURL Externals/curl)
 
-if(NOT ANDROID)
-  dolphin_find_optional_system_library(Iconv Externals/libiconv-1.14)
-else()
-  message(STATUS "Using static iconv from Externals")
-  add_subdirectory(Externals/libiconv-1.14 EXCLUDE_FROM_ALL)
-endif()
+# [dmcp] No clue why this was needed
+# if(NOT ANDROID)
+#   dolphin_find_optional_system_library(Iconv Externals/libiconv-1.14)
+# else()
+message(STATUS "Using static iconv from Externals")
+add_subdirectory(Externals/libiconv-1.14 EXCLUDE_FROM_ALL)
+# endif()
 
 if(NOT ANDROID)
   dolphin_find_optional_system_library(HIDAPI Externals/hidapi)
