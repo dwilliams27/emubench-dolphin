@@ -24,7 +24,11 @@ static InputConfig s_config("GCPadNew", _trans("Pad"), "GCPad", "Pad");
 // [dmcp]
 struct TimedInput
 {
-  uint16_t button_mask; // Which buttons are pressed by this timed event
+  uint16_t button_mask;
+  std::optional<uint8_t> stick_x;
+  std::optional<uint8_t> stick_y;
+  std::optional<uint8_t> substick_x;
+  std::optional<uint8_t> substick_y;
   uint32_t remaining_frames;
 };
 
@@ -46,6 +50,11 @@ void EnableHTTPController(int pad_num, bool enabled)
 
   std::lock_guard<std::mutex> lock(s_http_controllers[pad_num].mutex);
   s_http_controllers[pad_num].enabled = enabled;
+  s_http_controllers[pad_num].persistent_status = GCPadStatus{};
+  s_http_controllers[pad_num].persistent_status->stickX = GCPadStatus::MAIN_STICK_CENTER_X;
+  s_http_controllers[pad_num].persistent_status->stickY = GCPadStatus::MAIN_STICK_CENTER_Y;
+  s_http_controllers[pad_num].persistent_status->substickX = GCPadStatus::C_STICK_CENTER_X;
+  s_http_controllers[pad_num].persistent_status->substickY = GCPadStatus::C_STICK_CENTER_Y;
   NOTICE_LOG_FMT(CORE, "IPC Controller {} enabled {}",
                  pad_num, enabled ? "enabled" : "disabled");
 }
@@ -56,7 +65,7 @@ void QueueTimedInput(int pad_num, const GCPadStatus& status, uint32_t frames)
     return;
 
   std::lock_guard<std::mutex> lock(s_http_controllers[pad_num].mutex);
-  s_http_controllers[pad_num].timed_inputs.push_back({status.button, frames});
+  s_http_controllers[pad_num].timed_inputs.push_back({status.button, status.stickX, status.stickY, status.substickX, status.substickY, frames});
 }
 
 void AdvanceFrame(int pad_num)
@@ -161,6 +170,11 @@ GCPadStatus GetStatus(int pad_num)
     {
       // No need to check remaining_frames here, AdvanceFrame handles expiration
       combined_timed_buttons |= timed_input.button_mask;
+
+      if (timed_input.stick_x.has_value()) current_status.stickX = *timed_input.stick_x;
+      if (timed_input.stick_y.has_value()) current_status.stickY = *timed_input.stick_y;
+      if (timed_input.substick_x.has_value()) current_status.substickX = *timed_input.substick_x;
+      if (timed_input.substick_y.has_value()) current_status.substickY = *timed_input.substick_y;
     }
 
     // Apply timed buttons ON TOP of persistent buttons

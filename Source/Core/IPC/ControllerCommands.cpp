@@ -50,19 +50,32 @@ IPCControllerInput ParseIPCControllerInput(const nlohmann::json& j) {
   // Parse main stick
   if (j.contains("mainStick") && j["mainStick"].is_object()) {
       const auto& stick = j["mainStick"];
-      if (stick.contains("x") && stick["x"].is_number_unsigned()) 
-          input.mainStick.x = stick["x"].get<uint8_t>();
-      if (stick.contains("y") && stick["y"].is_number_unsigned()) 
-          input.mainStick.y = stick["y"].get<uint8_t>();
+      if (stick.contains("x") && stick["x"].is_number_unsigned()) {
+        input.mainStick.x = stick["x"].get<uint8_t>();
+      } else {
+        input.mainStick.x = GCPadStatus::MAIN_STICK_CENTER_X;
+      }
+      if (stick.contains("y") && stick["y"].is_number_unsigned()) {
+        input.mainStick.y = stick["y"].get<uint8_t>();
+      } else {
+        input.mainStick.y = GCPadStatus::MAIN_STICK_CENTER_Y;
+      }
   }
   
   // Parse C-stick
   if (j.contains("cStick") && j["cStick"].is_object()) {
       const auto& stick = j["cStick"];
-      if (stick.contains("x") && stick["x"].is_number_unsigned()) 
-          input.cStick.x = stick["x"].get<uint8_t>();
-      if (stick.contains("y") && stick["y"].is_number_unsigned()) 
-          input.cStick.y = stick["y"].get<uint8_t>();
+      if (stick.contains("x") && stick["x"].is_number_unsigned()) {
+        input.cStick.x = stick["x"].get<uint8_t>();
+      } else {
+        input.cStick.x = GCPadStatus::C_STICK_CENTER_X;
+      }
+          
+      if (stick.contains("y") && stick["y"].is_number_unsigned()) {
+        input.cStick.y = stick["y"].get<uint8_t>();
+      } else {
+        input.cStick.y = GCPadStatus::C_STICK_CENTER_Y;
+      }
   }
   
   // Parse triggers
