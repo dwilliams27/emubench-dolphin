@@ -788,3 +788,6 @@ if(USE_RETRO_ACHIEVEMENTS)
   target_compile_definitions(core PUBLIC -DUSE_RETRO_ACHIEVEMENTS)
   target_compile_definitions(core PUBLIC -DRC_CLIENT_SUPPORTS_HASH)
 endif()
+
+# [dmcp]
+target_link_libraries(core PRIVATE dolphin-ipc)

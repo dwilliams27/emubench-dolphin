@@ -4,6 +4,8 @@
 #include "Core/HW/GCPad.h"
 
 #include <cstring>
+#include <mutex>
+#include <optional>
 
 #include "Common/Common.h"
 #include "Core/HW/GCPadEmu.h"
@@ -11,10 +13,97 @@
 #include "InputCommon/ControllerInterface/ControllerInterface.h"
 #include "InputCommon/GCPadStatus.h"
 #include "InputCommon/InputConfig.h"
+// [dmcp]
+#include "Common/Logging/Log.h"
+#include <vector>
 
 namespace Pad
 {
 static InputConfig s_config("GCPadNew", _trans("Pad"), "GCPad", "Pad");
+
+// [dmcp]
+struct TimedInput
+{
+  uint16_t button_mask; // Which buttons are pressed by this timed event
+  uint32_t remaining_frames;
+};
+
+struct HTTPControllerState
+{
+  std::mutex mutex;
+  std::optional<GCPadStatus> persistent_status; // Renamed from 'status'
+  std::vector<TimedInput> timed_inputs;         // Queue for timed inputs
+  bool enabled = true;
+};
+
+// Global instance of HTTP controller state for each pad
+static std::array<HTTPControllerState, 4> s_http_controllers;
+
+void EnableHTTPController(int pad_num, bool enabled)
+{
+  if (pad_num < 0 || pad_num >= 4)
+    return;
+
+  std::lock_guard<std::mutex> lock(s_http_controllers[pad_num].mutex);
+  s_http_controllers[pad_num].enabled = enabled;
+  NOTICE_LOG_FMT(CORE, "IPC Controller {} enabled {}",
+                 pad_num, enabled ? "enabled" : "disabled");
+}
+
+void QueueTimedInput(int pad_num, const GCPadStatus& status, uint32_t frames)
+{
+  if (pad_num < 0 || pad_num >= 4 || frames == 0)
+    return;
+
+  std::lock_guard<std::mutex> lock(s_http_controllers[pad_num].mutex);
+  s_http_controllers[pad_num].timed_inputs.push_back({status.button, frames});
+}
+
+void AdvanceFrame(int pad_num)
+{
+  if (pad_num < 0 || pad_num >= 4)
+      return;
+
+  std::lock_guard<std::mutex> lock(s_http_controllers[pad_num].mutex);
+  auto& timed_queue = s_http_controllers[pad_num].timed_inputs;
+
+  if (timed_queue.empty())
+      return; // Nothing to do
+
+  // Decrement frame counts and prepare to remove expired entries
+  for (auto& timed_input : timed_queue) {
+      if (timed_input.remaining_frames > 0) {
+          timed_input.remaining_frames--;
+      }
+  }
+
+  // Remove entries where frames reached 0 using erase-remove idiom
+  timed_queue.erase(std::remove_if(timed_queue.begin(), timed_queue.end(),
+                                   [](const TimedInput& input) { return input.remaining_frames == 0; }),
+                    timed_queue.end());
+}
+
+void UpdateControllerStateFromHTTP(int pad_num, const GCPadStatus& status)
+{
+  if (pad_num < 0 || pad_num >= 4)
+    return;
+
+  std::lock_guard<std::mutex> lock(s_http_controllers[pad_num].mutex);
+  // Update the persistent state.
+  s_http_controllers[pad_num].persistent_status = status;
+  // Decide if receiving a persistent state should clear timed inputs.
+  // Uncomment the next line if a persistent update should override/cancel timed ones.
+  // s_http_controllers[pad_num].timed_inputs.clear();
+
+  // Log the persistent state update (original log is fine)
+  NOTICE_LOG_FMT(CORE, "IPC Persistent Controller state updated for pad {}: "
+                 "button: {}, stickX: {}, stickY: {}, substickX: {}, substickY: {}, "
+                 "triggerLeft: {}, triggerRight: {}",
+                 pad_num, status.button, status.stickX, status.stickY,
+                 status.substickX, status.substickY, status.triggerLeft,
+                 status.triggerRight);
+}
+
 InputConfig* GetConfig()
 {
   return &s_config;
@@ -58,7 +147,42 @@ bool IsInitialized()
 
 GCPadStatus GetStatus(int pad_num)
 {
-  return static_cast<GCPad*>(s_config.GetController(pad_num))->GetInput();
+  // [dmcp]
+  if (pad_num < 0 || pad_num >= 4)
+  {
+    return {};
+  }
+
+  std::lock_guard<std::mutex> lock(s_http_controllers[pad_num].mutex);
+  auto& controller_state = s_http_controllers[pad_num];
+
+  if (controller_state.enabled)
+  {
+    GCPadStatus current_status = controller_state.persistent_status.value_or(GCPadStatus{});
+    current_status.isConnected = controller_state.persistent_status.has_value();
+
+    // Combine active timed button presses
+    uint16_t combined_timed_buttons = 0;
+    for (const auto& timed_input : controller_state.timed_inputs)
+    {
+      // No need to check remaining_frames here, AdvanceFrame handles expiration
+      combined_timed_buttons |= timed_input.button_mask;
+    }
+
+    // Apply timed buttons ON TOP of persistent buttons
+    // (Timed press overrides persistent release for the duration)
+    current_status.button |= combined_timed_buttons;
+
+    // Ensure isConnected reflects overall activity (persistent or timed)
+    current_status.isConnected = current_status.isConnected || !controller_state.timed_inputs.empty();
+
+    return current_status;
+  }
+  else
+  {
+    // HTTP controller is disabled, fall back to standard input polling
+    return static_cast<GCPad*>(s_config.GetController(pad_num))->GetInput();
+  }
 }
 
 ControllerEmu::ControlGroup* GetGroup(int pad_num, PadGroup group)

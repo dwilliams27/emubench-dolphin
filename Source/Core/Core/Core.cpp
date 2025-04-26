@@ -91,6 +91,9 @@
 #include "VideoCommon/VideoBackendBase.h"
 #include "VideoCommon/VideoEvents.h"
 
+// [dmcp]
+#include "IPC/HTTPServer.h"
+
 namespace Core
 {
 static bool s_wants_determinism;
@@ -253,6 +256,13 @@ bool Init(Core::System& system, std::unique_ptr<BootParameters> boot, const Wind
   // Start the emu thread
   s_state.store(State::Starting);
   s_emu_thread = std::thread(EmuThread, std::ref(system), std::move(boot), prepared_wsi);
+
+  // [dmcp] Start IPC server
+  if (!IPC::HTTPServer::GetInstance().Start(58111)) {
+    ERROR_LOG_FMT(CORE, "Failed to start IPC server");
+  } else {
+    ERROR_LOG_FMT(CORE, "IPC server initialized on port 58111");
+  }
   return true;
 }
 
@@ -864,6 +874,11 @@ void Callback_FramePresented(const PresentInfo& present_info)
 // Called from VideoInterface::Update (CPU thread) at emulated field boundaries
 void Callback_NewField(Core::System& system)
 {
+  // [dmcp] Advance frame counters for timed IPC inputs
+  for (int i = 0; i < 4; ++i) {
+    Pad::AdvanceFrame(i);
+  }
+
   if (s_frame_step)
   {
     // To ensure that s_stop_frame_step is up to date, wait for the GPU thread queue to empty,
