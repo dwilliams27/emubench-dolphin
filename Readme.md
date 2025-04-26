@@ -1,4 +1,4 @@
-# 🐬🛜 dolphin-mcp
+# 🐬 dolphin-mcp
 
 This fork of Dolphin exposes an HTTP server over `58111` to be consumed by [dolphin-mcp-serv](https://github.com/dwilliams27/dolphin-mcp-serv), exposing tools for interacting with Gamecube games.
 
