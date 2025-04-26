@@ -770,7 +770,7 @@ if (USE_RETRO_ACHIEVEMENTS)
 endif()
 
 ########################################
-# [DMCP]
+# [dmcp]
 add_subdirectory(Externals/cpp-httplib)
 add_subdirectory(Externals/json)
 
