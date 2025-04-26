@@ -14,8 +14,8 @@ target_include_directories(dolphin-ipc PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(dolphin-ipc
 PUBLIC
   common
+  httplib
 
 PRIVATE
-  httplib
   nlohmann_json
 )

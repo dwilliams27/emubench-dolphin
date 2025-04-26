@@ -1,7 +1,6 @@
 #include "Common/Logging/Log.h"
 
 #include "HTTPServer.h"
-#include "httplib.h"
 #include <nlohmann/json.hpp>
 #include "Core/HW/GCPad.h"
 #include <iostream>
@@ -33,6 +32,7 @@ void HTTPServer::Stop() {
 		return;
 	
 	m_running = false;
+	m_server.stop();
 	
 	if (m_thread && m_thread->joinable()) {
 		m_thread->join();
@@ -42,13 +42,11 @@ void HTTPServer::Stop() {
 }
 
 void HTTPServer::ServerThread(int port) {
-	httplib::Server svr;
-	
-	svr.Get("/", [](const httplib::Request& req, httplib::Response& res) {
+	m_server.Get("/", [](const httplib::Request& req, httplib::Response& res) {
 		res.set_content("Hello World from Dolphin IPC Server!", "text/plain");
 	});
 	
-	svr.Post("/api/controller/:port", [](const httplib::Request& req, httplib::Response& res) {
+	m_server.Post("/api/controller/:port", [](const httplib::Request& req, httplib::Response& res) {
 		// First check if the port is a valid number
 		const std::string& port_str = req.path_params.at("port");
 		bool valid_number = true;
@@ -119,29 +117,28 @@ void HTTPServer::ServerThread(int port) {
 	});
     
 	// Use a timeout for listen to allow proper shutdown
-	svr.set_read_timeout(1); // 1 second
-	svr.set_write_timeout(1); // 1 second
-	
-	// Only accept connections from localhost
-	INFO_LOG_FMT(CONSOLE, "Starting IPC server on port {}", port);
+	m_server.set_read_timeout(1); // 1 second
+	m_server.set_write_timeout(1); // 1 second
+
+	NOTICE_LOG_FMT(CORE, "Starting IPC server on port {}", port);
 	
 	// Error handler for listen failures
-	svr.set_error_handler([](const httplib::Request&, httplib::Response&) {
-		INFO_LOG_FMT(CONSOLE, "IPC Server Error in request handling");
+	m_server.set_error_handler([](const httplib::Request&, httplib::Response&) {
+		NOTICE_LOG_FMT(CORE, "IPC Server Error in request handling");
 		return false; // Continue handling errors
 	});
 	
 	// Set exception handler to use a custom error handler instead of throwing
-	svr.set_exception_handler([](const httplib::Request&, httplib::Response& res, std::exception_ptr) {
-		INFO_LOG_FMT(CONSOLE, "IPC Server Exception");
+	m_server.set_exception_handler([](const httplib::Request&, httplib::Response& res, std::exception_ptr) {
+		NOTICE_LOG_FMT(CORE, "IPC Server Exception");
 		res.status = 500;
 		res.set_content("Internal Server Error", "text/plain");
 	});
 	
-	svr.listen("127.0.0.1", port);
+	m_server.listen("127.0.0.1", port);
 	
 	// The server has stopped
-	INFO_LOG_FMT(CONSOLE, "IPC server stopped");
+	NOTICE_LOG_FMT(CORE, "IPC server stopped");
 	m_running = false;
 }
 

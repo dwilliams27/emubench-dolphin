@@ -6,6 +6,8 @@
 #include <thread>
 #include <atomic>
 
+#include "httplib.h"
+
 namespace IPC {
 
 class HTTPServer {
@@ -27,6 +29,7 @@ public:
 private:
     HTTPServer() = default;
     ~HTTPServer();
+    httplib::Server m_server;
     
     // Server implementation
     void ServerThread(int port);
