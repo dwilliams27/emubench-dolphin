@@ -33,6 +33,8 @@
 using SIDeviceName = std::pair<SerialInterface::SIDevices, const char*>;
 static constexpr std::array s_gc_types = {
     SIDeviceName{SerialInterface::SIDEVICE_NONE, _trans("None")},
+    // [dmcp]
+    SIDeviceName{SerialInterface::SIDEVICE_GC_IPC, _trans("IPC GC Controller")},
     SIDeviceName{SerialInterface::SIDEVICE_GC_CONTROLLER, _trans("Standard Controller")},
     SIDeviceName{SerialInterface::SIDEVICE_WIIU_ADAPTER,
                  _trans("GameCube Controller Adapter (USB)")},
@@ -158,6 +160,10 @@ void GamecubeControllersWidget::OnGCPadConfigure(size_t index)
     break;
   case SerialInterface::SIDEVICE_GC_KEYBOARD:
     type = MappingWindow::Type::MAPPING_GC_KEYBOARD;
+    break;
+  // [dmcp]
+  case SerialInterface::SIDEVICE_GC_IPC:
+    type = MappingWindow::Type::MAPPING_GC_IPC;
     break;
   default:
     return;

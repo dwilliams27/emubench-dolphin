@@ -2,6 +2,7 @@
 
 #include "HTTPServer.h"
 #include <nlohmann/json.hpp>
+#include "InputCommon/GCPadStatus.h"
 #include "Core/HW/GCPad.h"
 #include <iostream>
 #include "IPC/ControllerCommands.h"
@@ -84,26 +85,28 @@ void HTTPServer::ServerThread(int port) {
 		// Use nlohmann::json::parse's callback mechanism to check validity without exceptions
 		nlohmann::json::parser_callback_t callback = [](int /*depth*/, nlohmann::json::parse_event_t /*event*/, 
 																									nlohmann::json& /*parsed*/) {
-				return true;  // Continue parsing
+      return true;  // Continue parsing
 		};
 
 		// Attempt to parse without throwing
 		json_parse_success = nlohmann::json::accept(req.body);
 
 		if (!json_parse_success) {
-				res.status = 400;
-				res.set_content("{\"error\":\"Invalid JSON payload\"}", "application/json");
-				return;
+      res.status = 400;
+      res.set_content("{\"error\":\"Invalid JSON payload\"}", "application/json");
+      return;
 		}
+
+    NOTICE_LOG_FMT(CORE, "IPC: Parsing request {}", json_data.dump());
 
 		// If parsing succeeded, actually parse the JSON
 		json_data = nlohmann::json::parse(req.body);
 
 		// Validate required fields
 		if (!json_data.contains("buttons")) {
-				res.status = 400;
-				res.set_content("{\"error\":\"Missing required fields\"}", "application/json");
-				return;
+      res.status = 400;
+      res.set_content("{\"error\":\"Missing required fields\"}", "application/json");
+      return;
 		}
 
 		// Convert to ControllerInput structure
@@ -111,7 +114,22 @@ void HTTPServer::ServerThread(int port) {
 
 		// Convert to GCPadStatus and update Dolphin
 		GCPadStatus status = ConvertToGCPadStatus(input);
-		Pad::UpdateControllerStateFromHTTP(port, status);
+		if (json_data.contains("frames") && json_data["frames"].is_number_unsigned()) {
+			uint32_t frame_count = json_data["frames"].get<uint32_t>();
+			if (frame_count > 0) {
+        // Queue the input to be active for a specific number of frames
+        Pad::QueueTimedInput(port, status, frame_count);
+        NOTICE_LOG_FMT(CORE, "IPC: Queued timed input for pad {} for {} frames", port, frame_count);
+			} else {
+        // If frames is 0, treat it as a persistent update (or ignore, depending on desired behavior)
+        Pad::UpdateControllerStateFromHTTP(port, status);
+        NOTICE_LOG_FMT(CORE, "IPC: Received frames=0, applying persistent update for pad {}", port);
+			}
+		} else {
+      // No 'frames' parameter, apply as persistent state
+      Pad::UpdateControllerStateFromHTTP(port, status);
+      NOTICE_LOG_FMT(CORE, "IPC: Applying persistent update for pad {}", port);
+		}
 
 		res.set_content("{\"status\":\"ok\"}", "application/json");
 	});

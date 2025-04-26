@@ -5,7 +5,6 @@
 #include "Core/Core.h"
 #include "Core/System.h"
 #include "Common/Logging/Log.h"
-#include "InputCommon/GCPadStatus.h"
 
 #include <nlohmann/json.hpp>
 
@@ -74,6 +73,10 @@ IPCControllerInput ParseIPCControllerInput(const nlohmann::json& j) {
       if (triggers.contains("r") && triggers["r"].is_number_unsigned()) 
           input.triggers.r = triggers["r"].get<uint8_t>();
   }
+
+  NOTICE_LOG_FMT(CORE, "Parsed IPCControllerInput: connected={}, frames{}, buttons(a={}, b={}, x={}, y={}, z={}, start={}, up={}, down={}, left={}, right={}, l={}, r={}), mainStick(x={}, y={}), cStick(x={}, y={}), triggers(l={}, r={})",
+                 input.connected, input.frames, input.buttons.a, input.buttons.b, input.buttons.x, input.buttons.y, input.buttons.z, input.buttons.start, input.buttons.up, input.buttons.down, input.buttons.left, input.buttons.right, input.buttons.l, input.buttons.r,
+                 input.mainStick.x, input.mainStick.y, input.cStick.x, input.cStick.y, input.triggers.l, input.triggers.r);
   
   return input;
 }

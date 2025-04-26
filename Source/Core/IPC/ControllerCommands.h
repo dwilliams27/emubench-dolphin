@@ -40,6 +40,7 @@ struct IPCControllerInput {
   StickPosition mainStick;
   StickPosition cStick;
   TriggerValues triggers;
+  uint32_t frames = 0;
 };
 
 IPCControllerInput ParseIPCControllerInput(const nlohmann::json& j);

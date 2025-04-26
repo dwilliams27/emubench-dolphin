@@ -102,4 +102,15 @@ public:
       (PAD_BUTTON_A | PAD_BUTTON_B | PAD_BUTTON_X | PAD_BUTTON_Y | PAD_BUTTON_START | PAD_TRIGGER_R)
       << 16;
 };
+
+// [dmcp] IPC controller
+class CSIDevice_IPC final : public CSIDevice_GCController
+{
+public:
+  CSIDevice_IPC(Core::System& system, SIDevices device, int device_number)
+  : CSIDevice_GCController(system, device, device_number)
+  {
+    Pad::EnableHTTPController(device_number, true);
+  }
+};
 }  // namespace SerialInterface
