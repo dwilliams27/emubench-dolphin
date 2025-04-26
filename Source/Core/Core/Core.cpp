@@ -733,7 +733,8 @@ State GetState(Core::System& system)
     return state;
 }
 
-static std::string GenerateScreenshotFolderPath()
+// [dmcp]
+std::string GenerateScreenshotFolderPath()
 {
   const std::string& gameId = SConfig::GetInstance().GetGameID();
   std::string path = File::GetUserPath(D_SCREENSHOTS_IDX) + gameId + DIR_SEP_CHR;
@@ -778,6 +779,23 @@ void SaveScreenShot(std::string_view name)
 {
   const Core::CPUThreadGuard guard(Core::System::GetInstance());
   g_frame_dumper->SaveScreenshot(fmt::format("{}{}.png", GenerateScreenshotFolderPath(), name));
+}
+
+// [dmcp]
+Common::Event& SaveScreenShotWithCallback(std::string_view name) {
+  NOTICE_LOG_FMT(CORE, "IPC: Host thread screenshot req {}", name);
+  const Core::CPUThreadGuard guard(Core::System::GetInstance());
+  
+  // Set up a wait event that matches what's in the FrameDumper
+  static thread_local Common::Event completion_event;
+  completion_event.Reset();
+  
+  g_frame_dumper->SaveScreenshotWithCallback(
+    fmt::format("{}{}.png", GenerateScreenshotFolderPath(), name),
+    &completion_event);
+  
+  NOTICE_LOG_FMT(CORE, "IPC: Queued screenshot request to {}", name);
+  return completion_event;
 }
 
 static bool PauseAndLock(Core::System& system, bool do_lock, bool unpause_on_unlock)

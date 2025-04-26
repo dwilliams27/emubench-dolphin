@@ -1,11 +1,16 @@
+#include "Common/Event.h"
+#include "Common/FileUtil.h"
 #include "Common/Logging/Log.h"
-
-#include "HTTPServer.h"
-#include <nlohmann/json.hpp>
-#include "InputCommon/GCPadStatus.h"
+#include "Common/Random.h"
 #include "Core/HW/GCPad.h"
-#include <iostream>
+#include "Core/Core.h"
+#include "HTTPServer.h"
+#include "InputCommon/GCPadStatus.h"
 #include "IPC/ControllerCommands.h"
+
+#include <nlohmann/json.hpp>
+#include <iostream>
+#include <future>
 
 namespace IPC {
 
@@ -45,6 +50,37 @@ void HTTPServer::Stop() {
 void HTTPServer::ServerThread(int port) {
 	m_server.Get("/", [](const httplib::Request& req, httplib::Response& res) {
 		res.set_content("Hello World from Dolphin IPC Server!", "text/plain");
+	});
+
+  m_server.Get("/api/screenshot", [](const httplib::Request& req, httplib::Response& res) {
+		NOTICE_LOG_FMT(CORE, "IPC: Screenshot request received");
+		u32 rand_id = Common::Random::GenerateValue<u32>();
+		const std::string screenshot_name = fmt::format("ipc_screenshot_{:08x}", rand_id);
+		NOTICE_LOG_FMT(CORE, "IPC: Screenshot name: {}", screenshot_name);
+		
+		// Use a future/promise to wait for the job to complete
+		std::promise<void> promise;
+		std::future<void> future = promise.get_future();
+		Common::Event* completion_event_ptr = nullptr;
+		
+		// Queue the screenshot operation on the Host thread
+		Core::QueueHostJob([screenshot_name, &promise, &completion_event_ptr](Core::System& system) {
+			completion_event_ptr = &Core::SaveScreenShotWithCallback(screenshot_name);
+			promise.set_value();
+		}, true);
+
+		future.get();
+		completion_event_ptr->Wait();
+		
+		NOTICE_LOG_FMT(CORE, "IPC: Screenshot done signal");
+		std::string contents;
+		if (File::ReadFileToString(fmt::format("{}{}.png", Core::GenerateScreenshotFolderPath(), screenshot_name), contents))
+		{
+			res.set_content(contents, "image/png");
+		} else {
+			res.status = 500;
+			res.set_content("Failed to read screenshot", "text/plain");
+		}
 	});
 	
 	m_server.Post("/api/controller/:port", [](const httplib::Request& req, httplib::Response& res) {
@@ -90,14 +126,13 @@ void HTTPServer::ServerThread(int port) {
 
 		// Attempt to parse without throwing
 		json_parse_success = nlohmann::json::accept(req.body);
+    NOTICE_LOG_FMT(CORE, "IPC: Parsing request {}", req.body);
 
 		if (!json_parse_success) {
       res.status = 400;
       res.set_content("{\"error\":\"Invalid JSON payload\"}", "application/json");
       return;
 		}
-
-    NOTICE_LOG_FMT(CORE, "IPC: Parsing request {}", json_data.dump());
 
 		// If parsing succeeded, actually parse the JSON
 		json_data = nlohmann::json::parse(req.body);
