@@ -89,13 +89,8 @@ void UpdateControllerStateFromHTTP(int pad_num, const GCPadStatus& status)
     return;
 
   std::lock_guard<std::mutex> lock(s_http_controllers[pad_num].mutex);
-  // Update the persistent state.
   s_http_controllers[pad_num].persistent_status = status;
-  // Decide if receiving a persistent state should clear timed inputs.
-  // Uncomment the next line if a persistent update should override/cancel timed ones.
-  // s_http_controllers[pad_num].timed_inputs.clear();
 
-  // Log the persistent state update (original log is fine)
   NOTICE_LOG_FMT(CORE, "IPC Persistent Controller state updated for pad {}: "
                  "button: {}, stickX: {}, stickY: {}, substickX: {}, substickY: {}, "
                  "triggerLeft: {}, triggerRight: {}",
@@ -159,7 +154,6 @@ GCPadStatus GetStatus(int pad_num)
   if (controller_state.enabled)
   {
     GCPadStatus current_status = controller_state.persistent_status.value_or(GCPadStatus{});
-    current_status.isConnected = controller_state.persistent_status.has_value();
 
     // Combine active timed button presses
     uint16_t combined_timed_buttons = 0;
@@ -172,9 +166,6 @@ GCPadStatus GetStatus(int pad_num)
     // Apply timed buttons ON TOP of persistent buttons
     // (Timed press overrides persistent release for the duration)
     current_status.button |= combined_timed_buttons;
-
-    // Ensure isConnected reflects overall activity (persistent or timed)
-    current_status.isConnected = current_status.isConnected || !controller_state.timed_inputs.empty();
 
     return current_status;
   }

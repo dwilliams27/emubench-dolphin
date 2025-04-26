@@ -118,7 +118,7 @@ void HTTPServer::ServerThread(int port) {
 		nlohmann::json json_data;
 		bool json_parse_success = false;
 
-		// Use nlohmann::json::parse's callback mechanism to check validity without exceptions
+		// Use nlohmann::json::parse's callback mechanism to check validity
 		nlohmann::json::parser_callback_t callback = [](int /*depth*/, nlohmann::json::parse_event_t /*event*/, 
 																									nlohmann::json& /*parsed*/) {
       return true;  // Continue parsing
@@ -136,13 +136,6 @@ void HTTPServer::ServerThread(int port) {
 
 		// If parsing succeeded, actually parse the JSON
 		json_data = nlohmann::json::parse(req.body);
-
-		// Validate required fields
-		if (!json_data.contains("buttons")) {
-      res.status = 400;
-      res.set_content("{\"error\":\"Missing required fields\"}", "application/json");
-      return;
-		}
 
 		// Convert to ControllerInput structure
 		IPCControllerInput input = ParseIPCControllerInput(json_data);
