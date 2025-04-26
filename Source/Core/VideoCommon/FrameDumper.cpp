@@ -229,6 +229,13 @@ void FrameDumper::FrameDumpThreadFunc()
       if (DumpFrameToPNG(frame, m_screenshot_name))
         OSD::AddMessage("Screenshot saved to " + m_screenshot_name);
 
+      // [dmcp]
+      if (m_external_screenshot_completed) {
+        m_external_screenshot_completed->Set();
+        m_external_screenshot_completed = nullptr;
+        NOTICE_LOG_FMT(CORE, "IPC: Queued screenshot saved successfully");
+      }
+
       // Reset settings
       m_screenshot_name.clear();
       m_screenshot_completed.Set();
@@ -342,6 +349,14 @@ void FrameDumper::SaveScreenshot(std::string filename)
 {
   std::lock_guard<std::mutex> lk(m_screenshot_lock);
   m_screenshot_name = std::move(filename);
+  m_screenshot_request.Set();
+}
+
+// [dmcp]
+void FrameDumper::SaveScreenshotWithCallback(std::string filename, Common::Event* completion_event) {
+  std::lock_guard<std::mutex> lk(m_screenshot_lock);
+  m_screenshot_name = std::move(filename);
+  m_external_screenshot_completed = completion_event;
   m_screenshot_request.Set();
 }
 

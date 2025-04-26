@@ -32,6 +32,9 @@ public:
 
   void SaveScreenshot(std::string filename);
 
+  // [dmcp]
+  void SaveScreenshotWithCallback(std::string filename, Common::Event* completion_event);
+
   bool IsFrameDumping() const;
   int GetRequiredResolutionLeastCommonMultiple() const;
 
@@ -100,6 +103,9 @@ private:
   std::string m_screenshot_name;
 
   Common::EventHook m_frame_end_handle;
+  
+  // [dmcp]
+  Common::Event* m_external_screenshot_completed = nullptr;
 };
 
 extern std::unique_ptr<FrameDumper> g_frame_dumper;
