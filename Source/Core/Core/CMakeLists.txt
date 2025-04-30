@@ -643,6 +643,8 @@ PUBLIC
   videonull
   videoogl
   videosoftware
+  # [dmcp]
+  dolphin-ipc
 
 PRIVATE
   FatFs
@@ -650,6 +652,8 @@ PRIVATE
   LZO::LZO
   LZ4::LZ4
   ZLIB::ZLIB
+  # [dmcp]
+  nlohmann_json
 )
 
 if (APPLE)
@@ -788,6 +792,3 @@ if(USE_RETRO_ACHIEVEMENTS)
   target_compile_definitions(core PUBLIC -DUSE_RETRO_ACHIEVEMENTS)
   target_compile_definitions(core PUBLIC -DRC_CLIENT_SUPPORTS_HASH)
 endif()
-
-# [dmcp]
-target_link_libraries(core PRIVATE dolphin-ipc)
