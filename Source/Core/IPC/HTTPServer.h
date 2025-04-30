@@ -6,7 +6,22 @@
 #include <thread>
 #include <atomic>
 
+#include <nlohmann/json.hpp>
 #include "httplib.h"
+
+#include "Common/Config/Config.h"
+#include "Core/Config/MainSettings.h"
+#include "Common/Event.h"
+#include "Common/FileUtil.h"
+#include "Common/Logging/Log.h"
+#include "Common/Random.h"
+#include "Core/HW/GCPad.h"
+#include "Core/Core.h"
+#include "HTTPServer.h"
+#include "InputCommon/GCPadStatus.h"
+#include "IPC/ControllerCommands.h"
+#include "IPC/MemWatch.h"
+#include "IPC/SaveState.h"
 
 namespace IPC {
 
@@ -36,6 +51,7 @@ private:
     
     std::atomic<bool> m_running{false};
     std::unique_ptr<std::thread> m_thread;
+    std::optional<nlohmann::json_abi_v3_12_0::json> ParseJson(std::__1::string rawBody);
 };
 
 } // namespace IPC

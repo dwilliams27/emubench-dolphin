@@ -1,14 +1,5 @@
-#include "Common/Event.h"
-#include "Common/FileUtil.h"
-#include "Common/Logging/Log.h"
-#include "Common/Random.h"
-#include "Core/HW/GCPad.h"
-#include "Core/Core.h"
-#include "HTTPServer.h"
-#include "InputCommon/GCPadStatus.h"
-#include "IPC/ControllerCommands.h"
+#include "IPC/HTTPServer.h"
 
-#include <nlohmann/json.hpp>
 #include <iostream>
 #include <future>
 
@@ -83,7 +74,7 @@ void HTTPServer::ServerThread(int port) {
 		}
 	});
 	
-	m_server.Post("/api/controller/:port", [](const httplib::Request& req, httplib::Response& res) {
+	m_server.Post("/api/controller/:port", [this](const httplib::Request& req, httplib::Response& res) {
 		// First check if the port is a valid number
 		const std::string& port_str = req.path_params.at("port");
 		bool valid_number = true;
@@ -114,49 +105,173 @@ void HTTPServer::ServerThread(int port) {
 		}
 		
 		// Parse JSON body
-		// First check if the JSON is valid by using parse with a callback
-		nlohmann::json json_data;
-		bool json_parse_success = false;
-
-		// Use nlohmann::json::parse's callback mechanism to check validity
-		nlohmann::json::parser_callback_t callback = [](int /*depth*/, nlohmann::json::parse_event_t /*event*/, 
-																									nlohmann::json& /*parsed*/) {
-      return true;  // Continue parsing
-		};
-
-		// Attempt to parse without throwing
-		json_parse_success = nlohmann::json::accept(req.body);
-    NOTICE_LOG_FMT(CORE, "IPC: Parsing request {}", req.body);
-
-		if (!json_parse_success) {
-      res.status = 400;
+		std::optional<nlohmann::json_abi_v3_12_0::json> json_data = ParseJson(req.body);
+		if (!json_data) {
+			res.status = 400;
       res.set_content("{\"error\":\"Invalid JSON payload\"}", "application/json");
       return;
 		}
-
-		// If parsing succeeded, actually parse the JSON
-		json_data = nlohmann::json::parse(req.body);
 
 		// Convert to ControllerInput structure
 		IPCControllerInput input = ParseIPCControllerInput(json_data);
 
 		// Convert to GCPadStatus and update Dolphin
 		GCPadStatus status = ConvertToGCPadStatus(input);
-		if (json_data.contains("frames") && json_data["frames"].is_number_unsigned()) {
-			uint32_t frame_count = json_data["frames"].get<uint32_t>();
+		if (json_data->contains("frames") && (*json_data)["frames"].is_number_unsigned()) {
+			uint32_t frame_count = (*json_data)["frames"].get<uint32_t>();
 			if (frame_count > 0) {
         // Queue the input to be active for a specific number of frames
         Pad::QueueTimedInput(port, status, frame_count);
         NOTICE_LOG_FMT(CORE, "IPC: Queued timed input for pad {} for {} frames", port, frame_count);
 			} else {
-        // If frames is 0, treat it as a persistent update (or ignore, depending on desired behavior)
-        Pad::UpdateControllerStateFromHTTP(port, status);
-        NOTICE_LOG_FMT(CORE, "IPC: Received frames=0, applying persistent update for pad {}", port);
+        res.status = 400;
+				res.set_content("{\"error\":\"Invalid frames parameter; must be >0\"}", "application/json");
+				return;
 			}
 		} else {
       // No 'frames' parameter, apply as persistent state
       Pad::UpdateControllerStateFromHTTP(port, status);
       NOTICE_LOG_FMT(CORE, "IPC: Applying persistent update for pad {}", port);
+		}
+
+		res.set_content("{\"status\":\"ok\"}", "application/json");
+	});
+
+	// Set up watches on all of the passed memory locs
+	m_server.Post("/api/memwatch", [this](const httplib::Request& req, httplib::Response& res) {
+		// Parse JSON body
+		std::optional<nlohmann::json_abi_v3_12_0::json> json_data = ParseJson(req.body);
+		if (!json_data) {
+			res.status = 400;
+      res.set_content("{\"error\":\"Invalid JSON payload\"}", "application/json");
+      return;
+		}
+
+		if (json_data->contains("addresses") && (*json_data)["addresses"].is_array()) {
+			for (auto& address : (*json_data)["addresses"]) {
+        IPC::MemWatch::GetInstance().WatchAddress(address);
+    	}
+		} else {
+			res.status = 400;
+      res.set_content("{\"error\":\"Invalid JSON value: addresses must be string[]\"}", "application/json");
+      return;
+		}
+
+		res.set_content("{\"status\":\"ok\"}", "application/json");
+	});
+
+	// Gets value of an active memwatch
+	m_server.Get("/api/memwatch", [](const httplib::Request& req, httplib::Response& res) {
+		if (req.has_param("addresses")) {
+			std::string addresses_param = req.get_param_value("addresses");
+        
+			// Parse the addresses (assuming comma-separated values)
+			std::vector<std::string> addresses;
+			std::stringstream ss(addresses_param);
+			std::string address;
+			
+			while (getline(ss, address, ',')) {
+					addresses.push_back(address);
+			}
+			
+			std::vector<u32> results;
+			for (auto& addr : addresses) {
+					std::optional<u32> value = IPC::MemWatch::GetInstance().FetchDmcpValue(addr);
+					if (value) {
+							results.push_back(*value);
+					} else {
+							res.status = 400;
+							res.set_content("{\"error\":\"Couldn't read value of an address\"}", "application/json");
+							return;
+					}
+			}
+			
+			nlohmann::json response = {{"values", results}};
+			res.set_content(response.dump(), "application/json");
+		} else {
+			res.status = 400;
+      res.set_content("{\"error\":\"Must pass 'addresses' query param\"}", "application/json");
+      return;
+		}
+	});
+
+	m_server.Post("/api/savestate/:slot", [](const httplib::Request& req, httplib::Response& res) {
+		const std::string& slot_str = req.path_params.at("slot");
+		bool valid_number = true;
+		int slot = 0;
+
+		for (char c : slot_str) {
+			if (!std::isdigit(c)) {
+				valid_number = false;
+				break;
+			}
+		}
+
+		if (valid_number && !slot_str.empty()) {
+			slot = std::atoi(slot_str.c_str());
+			
+			// Check if slot is in valid range (0-99)
+			if (slot < 0 || slot > 99) {
+				res.status = 400;
+				res.set_content("{\"error\":\"Invalid slot. Must be 0-99\"}", "application/json");
+				return;
+			}
+		} else {
+			res.status = 400;
+			res.set_content("{\"error\":\"Invalid slot parameter\"}", "application/json");
+			return;
+		}
+
+		IPC::SaveState::GetInstance().SaveToSlot(slot);
+		res.set_content("{\"status\":\"ok\"}", "application/json");
+	});
+
+	m_server.Get("/api/savestate/:slot", [](const httplib::Request& req, httplib::Response& res) {
+		const std::string& slot_str = req.path_params.at("slot");
+		bool valid_number = true;
+		int slot = 0;
+
+		for (char c : slot_str) {
+			if (!std::isdigit(c)) {
+				valid_number = false;
+				break;
+			}
+		}
+
+		if (valid_number && !slot_str.empty()) {
+			slot = std::atoi(slot_str.c_str());
+			
+			// Check if slot is in valid range (0-99)
+			if (slot < 0 || slot > 99) {
+				res.status = 400;
+				res.set_content("{\"error\":\"Invalid slot. Must be 0-99\"}", "application/json");
+				return;
+			}
+		} else {
+			res.status = 400;
+			res.set_content("{\"error\":\"Invalid slot parameter\"}", "application/json");
+			return;
+		}
+
+		IPC::SaveState::GetInstance().LoadFromSlot(slot);
+		res.set_content("{\"status\":\"ok\"}", "application/json");
+	});
+
+	m_server.Post("/api/config/emuspeed", [this](const httplib::Request& req, httplib::Response& res) {
+		// Parse JSON body
+		std::optional<nlohmann::json_abi_v3_12_0::json> json_data = ParseJson(req.body);
+		if (!json_data) {
+			res.status = 400;
+      res.set_content("{\"error\":\"Invalid JSON payload\"}", "application/json");
+      return;
+		}
+
+		if (json_data->contains("speed") && (*json_data)["speed"].is_number()) {
+			Config::SetCurrent(Config::MAIN_EMULATION_SPEED, (*json_data)["speed"].get<float>());
+		} else {
+			res.status = 400;
+      res.set_content("{\"error\":\"Invalid JSON value: addresses must be string[]\"}", "application/json");
+      return;
 		}
 
 		res.set_content("{\"status\":\"ok\"}", "application/json");
@@ -186,6 +301,20 @@ void HTTPServer::ServerThread(int port) {
 	// The server has stopped
 	NOTICE_LOG_FMT(CORE, "IPC server stopped");
 	m_running = false;
+}
+
+std::optional<nlohmann::json_abi_v3_12_0::json> HTTPServer::ParseJson(std::__1::string rawBody) {
+	nlohmann::json json_data;
+	bool json_parse_success = false;
+
+	json_parse_success = nlohmann::json::accept(rawBody);
+	NOTICE_LOG_FMT(CORE, "IPC: Parsing request {}", rawBody);
+
+	if (!json_parse_success) {
+		return std::nullopt;
+	}
+	
+	return nlohmann::json::parse(rawBody);
 }
 
 } // namespace IPC
