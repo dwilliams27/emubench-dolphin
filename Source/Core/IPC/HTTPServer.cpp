@@ -1,12 +1,4 @@
-#include "Common/Event.h"
-#include "Common/FileUtil.h"
-#include "Common/Logging/Log.h"
-#include "Common/Random.h"
-#include "Core/HW/GCPad.h"
-#include "Core/Core.h"
-#include "HTTPServer.h"
-#include "InputCommon/GCPadStatus.h"
-#include "IPC/ControllerCommands.h"
+#include "IPC/HTTPServer.h"
 
 #include <iostream>
 #include <future>
@@ -201,6 +193,68 @@ void HTTPServer::ServerThread(int port) {
       res.set_content("{\"error\":\"Must pass 'addresses' query param\"}", "application/json");
       return;
 		}
+	});
+
+	m_server.Post("/api/savestate/:slot", [this](const httplib::Request& req, httplib::Response& res) {
+		const std::string& slot_str = req.path_params.at("slot");
+		bool valid_number = true;
+		int slot = 0;
+
+		for (char c : slot_str) {
+			if (!std::isdigit(c)) {
+				valid_number = false;
+				break;
+			}
+		}
+
+		if (valid_number && !slot_str.empty()) {
+			slot = std::atoi(slot_str.c_str());
+			
+			// Check if slot is in valid range (0-99)
+			if (slot < 0 || slot > 99) {
+				res.status = 400;
+				res.set_content("{\"error\":\"Invalid slot. Must be 0-99\"}", "application/json");
+				return;
+			}
+		} else {
+			res.status = 400;
+			res.set_content("{\"error\":\"Invalid slot parameter\"}", "application/json");
+			return;
+		}
+
+		IPC::SaveState::GetInstance().SaveToSlot(slot);
+		res.set_content("{\"status\":\"ok\"}", "application/json");
+	});
+
+	m_server.Get("/api/savestate/:slot", [this](const httplib::Request& req, httplib::Response& res) {
+		const std::string& slot_str = req.path_params.at("slot");
+		bool valid_number = true;
+		int slot = 0;
+
+		for (char c : slot_str) {
+			if (!std::isdigit(c)) {
+				valid_number = false;
+				break;
+			}
+		}
+
+		if (valid_number && !slot_str.empty()) {
+			slot = std::atoi(slot_str.c_str());
+			
+			// Check if slot is in valid range (0-99)
+			if (slot < 0 || slot > 99) {
+				res.status = 400;
+				res.set_content("{\"error\":\"Invalid slot. Must be 0-99\"}", "application/json");
+				return;
+			}
+		} else {
+			res.status = 400;
+			res.set_content("{\"error\":\"Invalid slot parameter\"}", "application/json");
+			return;
+		}
+
+		IPC::SaveState::GetInstance().LoadFromSlot(slot);
+		res.set_content("{\"status\":\"ok\"}", "application/json");
 	});
     
 	// Use a timeout for listen to allow proper shutdown

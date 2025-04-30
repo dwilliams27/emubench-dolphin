@@ -7,9 +7,19 @@
 #include <atomic>
 
 #include <nlohmann/json.hpp>
-
 #include "httplib.h"
+
+#include "Common/Event.h"
+#include "Common/FileUtil.h"
+#include "Common/Logging/Log.h"
+#include "Common/Random.h"
+#include "Core/HW/GCPad.h"
+#include "Core/Core.h"
+#include "HTTPServer.h"
+#include "InputCommon/GCPadStatus.h"
+#include "IPC/ControllerCommands.h"
 #include "IPC/MemWatch.h"
+#include "IPC/SaveState.h"
 
 namespace IPC {
 

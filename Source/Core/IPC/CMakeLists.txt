@@ -2,12 +2,14 @@ set(SRCS
   HTTPServer.cpp
   ControllerCommands.cpp
   MemWatch.cpp
+  SaveState.cpp
 )
 
 set(HEADERS
   HTTPServer.h
   ControllerCommands.h
   MemWatch.h
+  SaveState.h
 )
 
 add_library(dolphin-ipc STATIC ${SRCS} ${HEADERS})
