@@ -9,6 +9,8 @@
 #include <nlohmann/json.hpp>
 #include "httplib.h"
 
+#include "Common/Config/Config.h"
+#include "Core/Config/MainSettings.h"
 #include "Common/Event.h"
 #include "Common/FileUtil.h"
 #include "Common/Logging/Log.h"

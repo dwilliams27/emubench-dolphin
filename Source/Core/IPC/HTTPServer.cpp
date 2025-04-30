@@ -195,7 +195,7 @@ void HTTPServer::ServerThread(int port) {
 		}
 	});
 
-	m_server.Post("/api/savestate/:slot", [this](const httplib::Request& req, httplib::Response& res) {
+	m_server.Post("/api/savestate/:slot", [](const httplib::Request& req, httplib::Response& res) {
 		const std::string& slot_str = req.path_params.at("slot");
 		bool valid_number = true;
 		int slot = 0;
@@ -226,7 +226,7 @@ void HTTPServer::ServerThread(int port) {
 		res.set_content("{\"status\":\"ok\"}", "application/json");
 	});
 
-	m_server.Get("/api/savestate/:slot", [this](const httplib::Request& req, httplib::Response& res) {
+	m_server.Get("/api/savestate/:slot", [](const httplib::Request& req, httplib::Response& res) {
 		const std::string& slot_str = req.path_params.at("slot");
 		bool valid_number = true;
 		int slot = 0;
@@ -254,6 +254,26 @@ void HTTPServer::ServerThread(int port) {
 		}
 
 		IPC::SaveState::GetInstance().LoadFromSlot(slot);
+		res.set_content("{\"status\":\"ok\"}", "application/json");
+	});
+
+	m_server.Post("/api/config/emuspeed", [this](const httplib::Request& req, httplib::Response& res) {
+		// Parse JSON body
+		std::optional<nlohmann::json_abi_v3_12_0::json> json_data = ParseJson(req.body);
+		if (!json_data) {
+			res.status = 400;
+      res.set_content("{\"error\":\"Invalid JSON payload\"}", "application/json");
+      return;
+		}
+
+		if (json_data->contains("speed") && (*json_data)["speed"].is_number()) {
+			Config::SetCurrent(Config::MAIN_EMULATION_SPEED, (*json_data)["speed"].get<float>());
+		} else {
+			res.status = 400;
+      res.set_content("{\"error\":\"Invalid JSON value: addresses must be string[]\"}", "application/json");
+      return;
+		}
+
 		res.set_content("{\"status\":\"ok\"}", "application/json");
 	});
     
