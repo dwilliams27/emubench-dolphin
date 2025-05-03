@@ -195,65 +195,56 @@ void HTTPServer::ServerThread(int port) {
 		}
 	});
 
-	m_server.Post("/api/savestate/:slot", [](const httplib::Request& req, httplib::Response& res) {
-		const std::string& slot_str = req.path_params.at("slot");
-		bool valid_number = true;
-		int slot = 0;
-
-		for (char c : slot_str) {
-			if (!std::isdigit(c)) {
-				valid_number = false;
-				break;
-			}
+	m_server.Post("/api/savestate/slot", [this](const httplib::Request& req, httplib::Response& res) {
+		std::optional<nlohmann::json_abi_v3_12_0::json> json_data = ParseJson(req.body);
+		if (!json_data) {
+			res.status = 400;
+      res.set_content("{\"error\":\"Invalid JSON payload\"}", "application/json");
+      return;
 		}
 
-		if (valid_number && !slot_str.empty()) {
-			slot = std::atoi(slot_str.c_str());
-			
-			// Check if slot is in valid range (0-99)
-			if (slot < 0 || slot > 99) {
+		if (json_data->contains("action") && (*json_data)["action"].is_string() && json_data->contains("slot") && (*json_data)["slot"].is_number_unsigned()) {
+			uint32_t slot = (*json_data)["slot"].get<uint32_t>();
+			if ((*json_data)["action"].get<std::string>() == "save") {
+				IPC::SaveState::GetInstance().SaveToSlot(slot);
+			} else if ((*json_data)["action"].get<std::string>() == "load") {
+				IPC::SaveState::GetInstance().LoadFromSlot(slot);
+			} else {
 				res.status = 400;
-				res.set_content("{\"error\":\"Invalid slot. Must be 0-99\"}", "application/json");
+				res.set_content("{\"error\":\"Invalid action. Must be 'save' or 'load'\"}", "application/json");
 				return;
 			}
 		} else {
 			res.status = 400;
-			res.set_content("{\"error\":\"Invalid slot parameter\"}", "application/json");
-			return;
+      res.set_content("{\"error\":\"Invalid JSON value: action and slot must be strings\"}", "application/json");
+      return;
 		}
-
-		IPC::SaveState::GetInstance().SaveToSlot(slot);
-		res.set_content("{\"status\":\"ok\"}", "application/json");
 	});
 
-	m_server.Get("/api/savestate/:slot", [](const httplib::Request& req, httplib::Response& res) {
-		const std::string& slot_str = req.path_params.at("slot");
-		bool valid_number = true;
-		int slot = 0;
-
-		for (char c : slot_str) {
-			if (!std::isdigit(c)) {
-				valid_number = false;
-				break;
-			}
+	m_server.Post("/api/savestate/file", [this](const httplib::Request& req, httplib::Response& res) {
+		std::optional<nlohmann::json_abi_v3_12_0::json> json_data = ParseJson(req.body);
+		if (!json_data) {
+			res.status = 400;
+      res.set_content("{\"error\":\"Invalid JSON payload\"}", "application/json");
+      return;
 		}
 
-		if (valid_number && !slot_str.empty()) {
-			slot = std::atoi(slot_str.c_str());
-			
-			// Check if slot is in valid range (0-99)
-			if (slot < 0 || slot > 99) {
+		if (json_data->contains("action") && (*json_data)["action"].is_string() && json_data->contains("to") && (*json_data)["to"].is_string()) {
+			if ((*json_data)["action"].get<std::string>() == "save") {
+				IPC::SaveState::GetInstance().SaveToFile((*json_data)["to"].get<std::string>());
+			} else if ((*json_data)["action"].get<std::string>() == "load") {
+				IPC::SaveState::GetInstance().LoadFromFile((*json_data)["to"].get<std::string>());
+			} else {
 				res.status = 400;
-				res.set_content("{\"error\":\"Invalid slot. Must be 0-99\"}", "application/json");
+				res.set_content("{\"error\":\"Invalid action. Must be 'save' or 'load'\"}", "application/json");
 				return;
 			}
 		} else {
 			res.status = 400;
-			res.set_content("{\"error\":\"Invalid slot parameter\"}", "application/json");
-			return;
+      res.set_content("{\"error\":\"Invalid JSON value: action and to must be strings\"}", "application/json");
+      return;
 		}
 
-		IPC::SaveState::GetInstance().LoadFromSlot(slot);
 		res.set_content("{\"status\":\"ok\"}", "application/json");
 	});
 

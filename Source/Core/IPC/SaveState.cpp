@@ -27,4 +27,17 @@ void SaveState::LoadFromSlot(int slot_number)
   State::Load(system, slot_number);
 }
 
+// Save to file
+void SaveState::SaveToFile(const std::string& filepath, bool wait_for_completion)
+{
+  Core::System& system = Core::System::GetInstance();
+  State::SaveAs(system, filepath, wait_for_completion);
+}
+
+void SaveState::LoadFromFile(const std::string& filepath)
+{
+  Core::System& system = Core::System::GetInstance();
+  State::LoadAs(system, filepath);
+}
+
 } // namespace IPC

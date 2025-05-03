@@ -18,6 +18,8 @@ public:
   void SaveToSlot(int slot_number, bool wait_for_completion = false);
   void LoadFromSlot(int slot_number);
   std::string GetSlotInfo(int slot_number);
+  void SaveToFile(const std::string& filepath, bool wait_for_completion = false);
+  void LoadFromFile(const std::string& filepath);
 
 private:
   SaveState() = default;
