@@ -14,6 +14,10 @@ Endpoint for pressing buttons, moving sticks, or pressing triggers for a specifi
 
 Endpoint for getting raw screenshot of running game.
 
+### /api/emulation
+
+Endpoints for controlling different aspects of the running emulation; save state, load state, play, pause
+
 ---
 
 # Dolphin - A GameCube and Wii Emulator
