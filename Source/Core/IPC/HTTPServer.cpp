@@ -195,7 +195,7 @@ void HTTPServer::ServerThread(int port) {
 		}
 	});
 
-	m_server.Post("/api/savestate/slot", [this](const httplib::Request& req, httplib::Response& res) {
+	m_server.Post("/api/emulation/state", [this](const httplib::Request& req, httplib::Response& res) {
 		std::optional<nlohmann::json_abi_v3_12_0::json> json_data = ParseJson(req.body);
 		if (!json_data) {
 			res.status = 400;
@@ -203,52 +203,54 @@ void HTTPServer::ServerThread(int port) {
       return;
 		}
 
-		if (json_data->contains("action") && (*json_data)["action"].is_string() && json_data->contains("slot") && (*json_data)["slot"].is_number_unsigned()) {
-			uint32_t slot = (*json_data)["slot"].get<uint32_t>();
+		if (json_data->contains("action") && (*json_data)["action"].is_string()) {
 			if ((*json_data)["action"].get<std::string>() == "save") {
-				IPC::SaveState::GetInstance().SaveToSlot(slot);
+				if (!json_data->contains("to")) {
+					res.status = 400;
+					res.set_content("{\"error\":\"Invalid JSON value: to is required\"}", "application/json");
+					return;
+				}
+
+				if ((*json_data)["to"].is_string()) {
+					IPC::SaveState::GetInstance().SaveToFile((*json_data)["to"].get<std::string>());
+				} else if ((*json_data)["to"].is_number_unsigned()) {
+					IPC::SaveState::GetInstance().SaveToSlot((*json_data)["to"].get<uint32_t>());
+				} else {
+					res.status = 400;
+					res.set_content("{\"error\":\"Invalid JSON value: to must be filepath or slot number\"}", "application/json");
+					return;
+				}
 			} else if ((*json_data)["action"].get<std::string>() == "load") {
-				IPC::SaveState::GetInstance().LoadFromSlot(slot);
+				if ((*json_data)["to"].is_string()) {
+					IPC::SaveState::GetInstance().LoadFromFile((*json_data)["to"].get<std::string>());
+				} else if ((*json_data)["to"].is_number_unsigned()) {
+					IPC::SaveState::GetInstance().LoadFromSlot((*json_data)["to"].get<uint32_t>());
+				} else {
+					res.status = 400;
+					res.set_content("{\"error\":\"Invalid JSON value: to must be filepath or slot number\"}", "application/json");
+					return;
+				}
+			} else if((*json_data)["action"].get<std::string>() == "pause") {
+				Core::System& system = Core::System::GetInstance();
+				Core::SetState(system, Core::State::Paused);
+			} else if((*json_data)["action"].get<std::string>() == "play") {
+				Core::System& system = Core::System::GetInstance();
+				Core::SetState(system, Core::State::Running);
 			} else {
 				res.status = 400;
-				res.set_content("{\"error\":\"Invalid action. Must be 'save' or 'load'\"}", "application/json");
+				res.set_content("{\"error\":\"Invalid action. Must be 'save', 'load', 'play', or 'pause'\"}", "application/json");
 				return;
 			}
 		} else {
 			res.status = 400;
-      res.set_content("{\"error\":\"Invalid JSON value: action and slot must be strings\"}", "application/json");
-      return;
-		}
-	});
-
-	m_server.Post("/api/savestate/file", [this](const httplib::Request& req, httplib::Response& res) {
-		std::optional<nlohmann::json_abi_v3_12_0::json> json_data = ParseJson(req.body);
-		if (!json_data) {
-			res.status = 400;
-      res.set_content("{\"error\":\"Invalid JSON payload\"}", "application/json");
-      return;
-		}
-
-		if (json_data->contains("action") && (*json_data)["action"].is_string() && json_data->contains("to") && (*json_data)["to"].is_string()) {
-			if ((*json_data)["action"].get<std::string>() == "save") {
-				IPC::SaveState::GetInstance().SaveToFile((*json_data)["to"].get<std::string>());
-			} else if ((*json_data)["action"].get<std::string>() == "load") {
-				IPC::SaveState::GetInstance().LoadFromFile((*json_data)["to"].get<std::string>());
-			} else {
-				res.status = 400;
-				res.set_content("{\"error\":\"Invalid action. Must be 'save' or 'load'\"}", "application/json");
-				return;
-			}
-		} else {
-			res.status = 400;
-      res.set_content("{\"error\":\"Invalid JSON value: action and to must be strings\"}", "application/json");
+      res.set_content("{\"error\":\"Must pass string 'action'\"}", "application/json");
       return;
 		}
 
 		res.set_content("{\"status\":\"ok\"}", "application/json");
 	});
 
-	m_server.Post("/api/config/emuspeed", [this](const httplib::Request& req, httplib::Response& res) {
+	m_server.Post("/api/emulation/config", [this](const httplib::Request& req, httplib::Response& res) {
 		// Parse JSON body
 		std::optional<nlohmann::json_abi_v3_12_0::json> json_data = ParseJson(req.body);
 		if (!json_data) {
