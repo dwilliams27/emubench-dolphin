@@ -430,6 +430,8 @@ PRIVATE
   uicommon
   imgui
   implot
+  # [dmcp]
+  nlohmann_json
 )
 
 if (WIN32)

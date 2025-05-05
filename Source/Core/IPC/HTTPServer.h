@@ -11,12 +11,16 @@
 
 #include "Common/Config/Config.h"
 #include "Core/Config/MainSettings.h"
+#include "Core/Boot/Boot.h"
+#include "Core/BootManager.h"
 #include "Common/Event.h"
 #include "Common/FileUtil.h"
 #include "Common/Logging/Log.h"
 #include "Common/Random.h"
+#include "Common/WindowSystemInfo.h"
 #include "Core/HW/GCPad.h"
 #include "Core/Core.h"
+#include "DolphinQt/MainWindow.h"
 #include "HTTPServer.h"
 #include "InputCommon/GCPadStatus.h"
 #include "IPC/ControllerCommands.h"
@@ -28,7 +32,7 @@ namespace IPC {
 class HTTPServer {
 public:
     // Singleton pattern
-    static HTTPServer& GetInstance();
+    static HTTPServer& GetInstance(MainWindow& win);
     
     // Delete copy constructor and assignment operator
     HTTPServer(const HTTPServer&) = delete;
@@ -42,9 +46,10 @@ public:
     bool IsRunning() const { return m_running; }
 
 private:
-    HTTPServer() = default;
+    explicit HTTPServer(MainWindow* window);
     ~HTTPServer();
     httplib::Server m_server;
+    MainWindow* m_window = nullptr;
     
     // Server implementation
     void ServerThread(int port);

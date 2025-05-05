@@ -5,13 +5,15 @@
 
 namespace IPC {
 
-HTTPServer& HTTPServer::GetInstance() {
-	static HTTPServer instance;
-	return instance;
+HTTPServer& HTTPServer::GetInstance(MainWindow& win) {
+    static HTTPServer instance(&win);
+    return instance;
 }
 
+HTTPServer::HTTPServer(MainWindow* window) : m_window(window) {}
+
 HTTPServer::~HTTPServer() {
-	Stop();
+    Stop();
 }
 
 bool HTTPServer::Start(int port) {
@@ -104,7 +106,6 @@ void HTTPServer::ServerThread(int port) {
 			return;
 		}
 		
-		// Parse JSON body
 		std::optional<nlohmann::json_abi_v3_12_0::json> json_data = ParseJson(req.body);
 		if (!json_data) {
 			res.status = 400;
@@ -139,7 +140,6 @@ void HTTPServer::ServerThread(int port) {
 
 	// Set up watches on all of the passed memory locs
 	m_server.Post("/api/memwatch", [this](const httplib::Request& req, httplib::Response& res) {
-		// Parse JSON body
 		std::optional<nlohmann::json_abi_v3_12_0::json> json_data = ParseJson(req.body);
 		if (!json_data) {
 			res.status = 400;
@@ -263,7 +263,37 @@ void HTTPServer::ServerThread(int port) {
 			Config::SetCurrent(Config::MAIN_EMULATION_SPEED, (*json_data)["speed"].get<float>());
 		} else {
 			res.status = 400;
-      res.set_content("{\"error\":\"Invalid JSON value: addresses must be string[]\"}", "application/json");
+      res.set_content("{\"error\":\"Invalid JSON value: speed must be a number\"}", "application/json");
+      return;
+		}
+
+		res.set_content("{\"status\":\"ok\"}", "application/json");
+	});
+
+	m_server.Post("/api/emulation/boot", [this](const httplib::Request& req, httplib::Response& res) {
+		std::optional<nlohmann::json_abi_v3_12_0::json> json_data = ParseJson(req.body);
+		if (!json_data) {
+			res.status = 400;
+      res.set_content("{\"error\":\"Invalid JSON payload\"}", "application/json");
+      return;
+		}
+
+		if (json_data->contains("game_path") && (*json_data)["game_path"].is_string()) {
+			std::string rvz_path = (*json_data)["game_path"].get<std::string>();
+			
+			// Make sure any previous game is stopped
+			Core::System& system = Core::System::GetInstance();
+			Core::Stop(system);
+			
+			NOTICE_LOG_FMT(CORE, "IPC: Booting game {} through IPC", rvz_path);
+			
+			// Start the game on the main thread
+			QMetaObject::invokeMethod(m_window, "StartGameOnMainThread", 
+                             Qt::BlockingQueuedConnection,
+                             Q_ARG(std::string, rvz_path));
+		} else {
+			res.status = 400;
+      res.set_content("{\"error\":\"Invalid JSON value: game_path must be string[]\"}", "application/json");
       return;
 		}
 

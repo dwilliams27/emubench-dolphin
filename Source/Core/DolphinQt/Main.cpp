@@ -43,6 +43,9 @@
 #include "UICommon/CommandLineParse.h"
 #include "UICommon/UICommon.h"
 
+// [dmcp]
+#include "IPC/HTTPServer.h"
+
 static bool QtMsgAlertHandler(const char* caption, const char* text, bool yes_no,
                               Common::MsgType style)
 {
@@ -259,6 +262,13 @@ int main(int argc, char* argv[])
 
     MainWindow win{Core::System::GetInstance(), std::move(boot),
                    static_cast<const char*>(options.get("movie"))};
+
+    // [dmcp]
+    if (!IPC::HTTPServer::GetInstance(win).Start(58111)) {
+      ERROR_LOG_FMT(CORE, "Failed to start IPC server");
+    } else {
+      INFO_LOG_FMT(CORE, "IPC server initialized on port 58111");
+    }
 
 #if defined(USE_ANALYTICS) && USE_ANALYTICS
     if (!Config::Get(Config::MAIN_ANALYTICS_PERMISSION_ASKED))
