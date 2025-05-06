@@ -24,7 +24,7 @@
 #include "HTTPServer.h"
 #include "InputCommon/GCPadStatus.h"
 #include "IPC/ControllerCommands.h"
-#include "IPC/MemWatch.h"
+#include "IPC/MemWatcher.h"
 #include "IPC/SaveState.h"
 
 namespace IPC {

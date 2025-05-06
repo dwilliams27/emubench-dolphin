@@ -93,7 +93,7 @@
 
 // [dmcp]
 #include "IPC/HTTPServer.h"
-#include "IPC/MemWatch.h"
+#include "IPC/MemWatcher.h"
 
 namespace Core
 {
@@ -159,7 +159,7 @@ void OnFrameEnd(Core::System& system)
   ASSERT(IsCPUThread());
   const CPUThreadGuard guard(system);
 
-  IPC::MemWatch::GetInstance().Step(guard);
+  IPC::MemWatcher::GetInstance().Step(guard);
 #ifdef USE_MEMORYWATCHER
   if (s_memory_watcher)
   {

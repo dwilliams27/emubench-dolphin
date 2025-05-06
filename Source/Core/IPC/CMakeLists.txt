@@ -1,14 +1,14 @@
 set(SRCS
   HTTPServer.cpp
   ControllerCommands.cpp
-  MemWatch.cpp
+  MemWatcher.cpp
   SaveState.cpp
 )
 
 set(HEADERS
   HTTPServer.h
   ControllerCommands.h
-  MemWatch.h
+  MemWatcher.h
   SaveState.h
 )
 

@@ -138,8 +138,7 @@ void HTTPServer::ServerThread(int port) {
 		res.set_content("{\"status\":\"ok\"}", "application/json");
 	});
 
-	// Set up watches on all of the passed memory locs
-	m_server.Post("/api/memwatch", [this](const httplib::Request& req, httplib::Response& res) {
+	m_server.Post("/api/memwatch/setup", [this](const httplib::Request& req, httplib::Response& res) {
 		std::optional<nlohmann::json_abi_v3_12_0::json> json_data = ParseJson(req.body);
 		if (!json_data) {
 			res.status = 400;
@@ -147,13 +146,39 @@ void HTTPServer::ServerThread(int port) {
       return;
 		}
 
-		if (json_data->contains("addresses") && (*json_data)["addresses"].is_array()) {
-			for (auto& address : (*json_data)["addresses"]) {
-        IPC::MemWatch::GetInstance().WatchAddress(address);
-    	}
+		if (json_data->contains("watches") && (*json_data)["watches"].is_object()) {
+			for (auto& watch : (*json_data)["watches"].items()) {
+				if (!watch.value().contains("address") || !watch.value()["address"].is_string()) {
+					res.status = 400;
+					res.set_content("{\"error\":\"Invalid JSON value: address is required\"}", "application/json");
+					return;
+				}
+				std::string address = watch.value()["address"].get<std::string>();
+
+				std::optional<std::string> offset = std::nullopt;
+				if (watch.value().contains("offset") && watch.value()["offset"].is_string()) {
+					offset = watch.value()["offset"].get<std::string>();
+				}
+
+				if (!watch.value().contains("size") || !watch.value()["size"].is_number()) {
+					res.status = 400;
+					res.set_content("{\"error\":\"Invalid JSON value: size is required\"}", "application/json");
+					return;
+				}
+				int size = watch.value()["size"].get<int>();
+				std::optional<std::string> current_value = std::nullopt;
+
+				MemoryWatch mw;
+				mw.address = address;
+				mw.offset = offset;
+				mw.size = size;
+				mw.current_value = current_value;
+
+				IPC::MemWatcher::GetInstance().WatchAddress(watch.key(), mw);
+			}
 		} else {
 			res.status = 400;
-      res.set_content("{\"error\":\"Invalid JSON value: addresses must be string[]\"}", "application/json");
+      res.set_content("{\"error\":\"Invalid JSON value: addresses must be an object\"}", "application/json");
       return;
 		}
 
@@ -161,31 +186,31 @@ void HTTPServer::ServerThread(int port) {
 	});
 
 	// Gets value of an active memwatch
-	m_server.Get("/api/memwatch", [](const httplib::Request& req, httplib::Response& res) {
-		if (req.has_param("addresses")) {
-			std::string addresses_param = req.get_param_value("addresses");
+	m_server.Get("/api/memwatch/values", [](const httplib::Request& req, httplib::Response& res) {
+		if (req.has_param("names")) {
+			std::string names_param = req.get_param_value("names");
         
-			// Parse the addresses (assuming comma-separated values)
-			std::vector<std::string> addresses;
-			std::stringstream ss(addresses_param);
-			std::string address;
+			// Parse the names (assuming comma-separated values)
+			std::vector<std::string> names;
+			std::stringstream ss(names_param);
+			std::string name;
 			
-			while (getline(ss, address, ',')) {
-					addresses.push_back(address);
+			while (getline(ss, name, ',')) {
+				names.push_back(name);
 			}
 			
-			std::vector<u32> results;
-			for (auto& addr : addresses) {
-					std::optional<u32> value = IPC::MemWatch::GetInstance().FetchDmcpValue(addr);
-					if (value) {
-							results.push_back(*value);
-					} else {
-							res.status = 400;
-							res.set_content("{\"error\":\"Couldn't read value of an address\"}", "application/json");
-							return;
-					}
+			std::map<std::string, std::string> results;
+			for (auto& nm : names) {
+				std::optional<std::string> value = IPC::MemWatcher::GetInstance().FetchDmcpValue(nm);
+				if (value.has_value()) {
+					results[nm] = value.value();
+				} else {
+					res.status = 400;
+					res.set_content("{\"error\":\"Couldn't read value of an address\"}", "application/json");
+					return;
+				}
 			}
-			
+
 			nlohmann::json response = {{"values", results}};
 			res.set_content(response.dump(), "application/json");
 		} else {
