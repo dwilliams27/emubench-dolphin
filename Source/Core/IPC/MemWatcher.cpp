@@ -50,7 +50,6 @@ void MemWatcher::UpdateDmcpValue(const Core::CPUThreadGuard& guard, MemoryWatch&
   } else {
     mw.current_value = std::make_optional(ReadNBytesAsHex(guard, std::stoul(mw.address, nullptr, 16), mw.size));
   }
-  NOTICE_LOG_FMT(CORE, "IPC: Read {} bytes from address {}: {}", mw.size, mw.address, *mw.current_value);
 }
 
 std::optional<std::string> MemWatcher::FetchDmcpValue(const std::string& name)
