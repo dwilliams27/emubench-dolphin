@@ -1,6 +1,6 @@
-# 🐬 dolphin-mcp
+# 🐬 emubench-dolphin
 
-This fork of Dolphin exposes an HTTP server over `58111` to be consumed by [dolphin-mcp-serv](https://github.com/dwilliams27/dolphin-mcp-serv), exposing tools for interacting with Gamecube games.
+This fork of Dolphin exposes an HTTP server over `58111` to be consumed by [emubench-dolphin-serv](https://github.com/dwilliams27/emubench-dolphin-serv) and [emubench-ui](https://github.com/dwilliams27/emubench-dolphin-ui), exposing tools using MCP to allow agents to with Gamecube games.
 
 In Dolphin's `Controller Settings`, be sure to set the port you want to control to `IPC GC Controller`.
 
