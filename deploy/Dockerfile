@@ -31,6 +31,7 @@ RUN apt-get update && apt-get install -y \
     qt6-base-private-dev \
     libqt6svg6-dev \
     xvfb \
+    xdg-utils \
     ninja-build
 
 WORKDIR /dolphin-src
