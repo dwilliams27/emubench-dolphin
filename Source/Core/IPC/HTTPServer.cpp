@@ -351,7 +351,7 @@ void HTTPServer::ServerThread(int port) {
 	m_running = false;
 }
 
-std::optional<nlohmann::json_abi_v3_12_0::json> HTTPServer::ParseJson(std::__1::string rawBody) {
+std::optional<nlohmann::json_abi_v3_12_0::json> HTTPServer::ParseJson(std::string rawBody) {
 	nlohmann::json json_data;
 	bool json_parse_success = false;
 

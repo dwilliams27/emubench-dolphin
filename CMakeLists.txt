@@ -314,7 +314,9 @@ else()
 
   # gcc uses some optimizations which might break stuff without this flag
   check_and_add_flag(NO_STRICT_ALIASING -fno-strict-aliasing)
-  check_and_add_flag(NO_EXCEPTIONS -fno-exceptions)
+  
+  # [dmcp]
+  # check_and_add_flag(NO_EXCEPTIONS -fno-exceptions)
 
   check_and_add_flag(VISIBILITY_INLINES_HIDDEN -fvisibility-inlines-hidden)
   check_and_add_flag(VISIBILITY_HIDDEN -fvisibility=hidden)
@@ -362,7 +364,9 @@ if(CMAKE_SYSTEM_NAME MATCHES "Darwin")
   # Set FMT_EXCEPTIONS = 0, for consistency with -fno-exceptions earlier.
   # If we set only -fno-exceptions, fmt fails to compile when included from
   # Objective-C++ because fmt tries try to use throw because __EXCEPTIONS is defined.
-  add_definitions(-DFMT_EXCEPTIONS=0)
+
+  # [dmcp]
+  # add_definitions(-DFMT_EXCEPTIONS=0)
 
   find_library(APPKIT_LIBRARY AppKit)
   find_library(APPSERV_LIBRARY ApplicationServices)

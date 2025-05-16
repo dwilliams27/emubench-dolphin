@@ -150,7 +150,9 @@ const Info<SerialInterface::SIDevices>& GetInfoForSIDevice(int channel)
 {
   static const std::array<const Info<SerialInterface::SIDevices>, 4> infos{
       Info<SerialInterface::SIDevices>{{System::Main, "Core", "SIDevice0"},
-                                       SerialInterface::SIDEVICE_GC_CONTROLLER},
+                                      // [dmcp]
+                                      //  SerialInterface::SIDEVICE_GC_CONTROLLER},
+                                       SerialInterface::SIDEVICE_GC_IPC},
       Info<SerialInterface::SIDevices>{{System::Main, "Core", "SIDevice1"},
                                        SerialInterface::SIDEVICE_NONE},
       Info<SerialInterface::SIDevices>{{System::Main, "Core", "SIDevice2"},

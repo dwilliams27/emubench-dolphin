@@ -56,7 +56,7 @@ private:
     
     std::atomic<bool> m_running{false};
     std::unique_ptr<std::thread> m_thread;
-    std::optional<nlohmann::json_abi_v3_12_0::json> ParseJson(std::__1::string rawBody);
+    std::optional<nlohmann::json_abi_v3_12_0::json> ParseJson(std::string rawBody);
 };
 
 } // namespace IPC
