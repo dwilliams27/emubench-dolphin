@@ -38,8 +38,9 @@ const Info<bool> MAIN_SKIP_IPL{{System::Main, "Core", "SkipIPL"}, true};
 const Info<PowerPC::CPUCore> MAIN_CPU_CORE{{System::Main, "Core", "CPUCore"},
                                            PowerPC::DefaultCPUCore()};
 const Info<bool> MAIN_JIT_FOLLOW_BRANCH{{System::Main, "Core", "JITFollowBranch"}, true};
-const Info<bool> MAIN_FASTMEM{{System::Main, "Core", "Fastmem"}, true};
-const Info<bool> MAIN_FASTMEM_ARENA{{System::Main, "Core", "FastmemArena"}, true};
+// [dmcp]
+const Info<bool> MAIN_FASTMEM{{System::Main, "Core", "Fastmem"}, false};
+const Info<bool> MAIN_FASTMEM_ARENA{{System::Main, "Core", "FastmemArena"}, false};
 const Info<bool> MAIN_LARGE_ENTRY_POINTS_MAP{{System::Main, "Core", "LargeEntryPointsMap"}, true};
 const Info<bool> MAIN_ACCURATE_CPU_CACHE{{System::Main, "Core", "AccurateCPUCache"}, false};
 const Info<bool> MAIN_DSP_HLE{{System::Main, "Core", "DSPHLE"}, true};
@@ -197,7 +198,8 @@ const Info<std::string> MAIN_WIIMOTE_AUTO_CONNECT_ADDRESSES{
 const Info<bool> MAIN_WIIMOTE_ENABLE_SPEAKER{{System::Main, "Core", "WiimoteEnableSpeaker"}, false};
 const Info<bool> MAIN_CONNECT_WIIMOTES_FOR_CONTROLLER_INTERFACE{
     {System::Main, "Core", "WiimoteControllerInterface"}, false};
-const Info<bool> MAIN_MMU{{System::Main, "Core", "MMU"}, false};
+// [dmcp]
+const Info<bool> MAIN_MMU{{System::Main, "Core", "MMU"}, true};
 const Info<bool> MAIN_PAUSE_ON_PANIC{{System::Main, "Core", "PauseOnPanic"}, false};
 const Info<int> MAIN_BB_DUMP_PORT{{System::Main, "Core", "BBDumpPort"}, -1};
 const Info<bool> MAIN_SYNC_GPU{{System::Main, "Core", "SyncGPU"}, false};
