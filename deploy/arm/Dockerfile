@@ -56,12 +56,13 @@ RUN mkdir -p /root/.dolphin-emu/Config \
     && mkdir -p /logs
 
 COPY deploy/configs/Dolphin.ini /root/.dolphin-emu/Config/Dolphin.ini
-COPY deploy/arm/entrypoint.sh /app/
+COPY deploy/arm/entrypoint.sh /app/entrypoint.sh
+
+# Debug
+# COPY games/worms_3d.rvz /games/worms_3d.rvz
 
 RUN chmod +x /app/entrypoint.sh
 RUN chmod +x /app/dolphin-emu-nogui
-
-VOLUME ["/games"]
 
 WORKDIR /app
 RUN rm -rf /dolphin-src

@@ -356,7 +356,7 @@ void HTTPServer::ServerThread(int port) {
 		res.set_content("Internal Server Error", "text/plain");
 	});
 	
-	m_server.listen("127.0.0.1", port);
+	m_server.listen("0.0.0.0", port);
 	
 	// The server has stopped
 	NOTICE_LOG_FMT(CORE, "IPC server stopped");
