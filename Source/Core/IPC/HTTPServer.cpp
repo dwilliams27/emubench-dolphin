@@ -10,7 +10,12 @@ HTTPServer& HTTPServer::GetInstance(MainWindow& win) {
     return instance;
 }
 
-HTTPServer::HTTPServer(MainWindow* window) : m_window(window) {}
+HTTPServer& HTTPServer::GetInstance() {
+    static HTTPServer instance;
+    return instance;
+}
+
+HTTPServer::HTTPServer(MainWindow* window) : m_window(std::make_optional(window)) {}
 
 HTTPServer::~HTTPServer() {
     Stop();
@@ -313,9 +318,16 @@ void HTTPServer::ServerThread(int port) {
 			NOTICE_LOG_FMT(CORE, "IPC: Booting game {} through IPC", rvz_path);
 			
 			// Start the game on the main thread
-			QMetaObject::invokeMethod(m_window, "StartGameOnMainThread", 
+			if (m_window.has_value() && *m_window) {
+				QMetaObject::invokeMethod(*m_window, "StartGameOnMainThread", 
                              Qt::BlockingQueuedConnection,
                              Q_ARG(std::string, rvz_path));
+			} else {
+				NOTICE_LOG_FMT(CORE, "IPC: Cannot boot game, main window not available");
+				res.status = 500;
+				res.set_content("{\"error\":\"Main window not available\"}", "application/json");
+				return;
+			}
 		} else {
 			res.status = 400;
       res.set_content("{\"error\":\"Invalid JSON value: game_path must be string[]\"}", "application/json");

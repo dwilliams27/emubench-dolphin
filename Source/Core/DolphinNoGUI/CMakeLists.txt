@@ -30,6 +30,8 @@ PRIVATE
   core
   uicommon
   cpp-optparse
+  # [dmcp]
+  nlohmann_json
 )
 
 if(APPLE)

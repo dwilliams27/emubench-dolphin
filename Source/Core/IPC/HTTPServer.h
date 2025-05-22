@@ -5,6 +5,7 @@
 #include <string>
 #include <thread>
 #include <atomic>
+#include <optional>
 
 #include <nlohmann/json.hpp>
 #include "httplib.h"
@@ -33,6 +34,7 @@ class HTTPServer {
 public:
     // Singleton pattern
     static HTTPServer& GetInstance(MainWindow& win);
+    static HTTPServer& GetInstance();
     
     // Delete copy constructor and assignment operator
     HTTPServer(const HTTPServer&) = delete;
@@ -46,10 +48,10 @@ public:
     bool IsRunning() const { return m_running; }
 
 private:
-    explicit HTTPServer(MainWindow* window);
+    explicit HTTPServer(MainWindow* window = nullptr);
     ~HTTPServer();
     httplib::Server m_server;
-    MainWindow* m_window = nullptr;
+    std::optional<MainWindow*> m_window;
     
     // Server implementation
     void ServerThread(int port);

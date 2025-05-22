@@ -1,8 +1,5 @@
-# deploy/Dockerfile
-# Multi-stage build for Dolphin Emulator (Linux version) for ARM architecture
 FROM ubuntu:22.04 as builder
 
-# Install build dependencies
 RUN apt-get update && apt-get install -y \
     build-essential \
     cmake \
@@ -59,13 +56,15 @@ RUN mkdir -p /root/.dolphin-emu/Config \
     && mkdir -p /logs
 
 COPY deploy/configs/Dolphin.ini /root/.dolphin-emu/Config/Dolphin.ini
-COPY games/hmoon.rvz /games/hmoon.rvz
+COPY deploy/arm/entrypoint.sh /app/
 
-COPY deploy/entrypoint.sh /app/
 RUN chmod +x /app/entrypoint.sh
-RUN chmod +x /dolphin-src/build/Binaries/dolphin-emu-nogui
+RUN chmod +x /app/dolphin-emu-nogui
+
+VOLUME ["/games"]
 
 WORKDIR /app
 RUN rm -rf /dolphin-src
 
-ENTRYPOINT ["ls"]
+ENTRYPOINT ["/app/entrypoint.sh"]
+CMD []
