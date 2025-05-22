@@ -66,5 +66,7 @@ VOLUME ["/games"]
 WORKDIR /app
 RUN rm -rf /dolphin-src
 
+EXPOSE 58111
+
 ENTRYPOINT ["/app/entrypoint.sh"]
 CMD []
