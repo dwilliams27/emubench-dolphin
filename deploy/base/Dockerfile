@@ -1,6 +1,8 @@
-FROM ubuntu:22.04 as builder
+FROM ubuntu:22.04 AS builder
 
-RUN apt-get update && apt-get install -y \
+ARG DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     cmake \
     git \
@@ -29,7 +31,9 @@ RUN apt-get update && apt-get install -y \
     libqt6svg6-dev \
     xvfb \
     xdg-utils \
-    ninja-build
+    ninja-build \
+    ca-certificates && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /dolphin-src
 
@@ -43,27 +47,61 @@ RUN mkdir build && cd build && \
     -DDISABLE_ADVANCE_SIMD=ON && \
     ninja
 
-RUN mkdir -p /app
+FROM ubuntu:22.04 AS runtime
 
-RUN cp build/Binaries/dolphin-emu /app/ && \
-    cp build/Binaries/dolphin-emu-nogui /app/ && \
-    mkdir -p /app/Sys && \
-    cp -r Data/Sys/* /app/Sys/
+ARG DEBIAN_FRONTEND=noninteractive
 
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    # Essential for running GUI apps in a headless environment via entrypoint
+    xvfb \
+    # FFmpeg runtime libraries
+    libavcodec58 libavformat58 libavutil56 libswscale5 \
+    # X11 and related GUI libraries
+    libxi6 libxrandr2 libxcursor1 libxinerama1 libxfixes3 libxrender1 libxkbcommon0 libxkbcommon-x11-0 libfontconfig1 libfreetype6 \
+    # Input/Device libraries
+    libudev1 libevdev2 \
+    # SFML runtime libraries (Ubuntu 22.04 uses SFML 2.5.1)
+    libsfml-audio2.5 libsfml-graphics2.5 libsfml-network2.5 libsfml-system2.5 libsfml-window2.5 \
+    # Networking and Crypto libraries
+    libminiupnpc17 libmbedtls14 libmbedcrypto7 libmbedx509-1 libcurl4 \
+    # HIDAPI runtime
+    libhidapi-hidraw0 \
+    # Systemd runtime (often a dependency of other components)
+    libsystemd0 \
+    # Bluetooth runtime
+    libbluetooth3 \
+    # Audio runtime
+    libasound2 libpulse0 \
+    # Graphics runtime (OpenGL and Vulkan loaders)
+    libgl1 libvulkan1 \
+    # Qt6 runtime libraries
+    libqt6core6 libqt6dbus6 libqt6gui6 libqt6network6 libqt6opengl6 libqt6widgets6 libqt6xml6 libqt6svg6 \
+    # Qt6 platform plugins (essential for GUI)
+    qt6-qpa-plugins \
+    # Other common shared libraries that might be pulled in or needed by Qt
+    libglib2.0-0 libpng16-16 zlib1g libicu70 \
+    libsm6 libice6 \
+    # For find, head, etc. in entrypoint (usually part of base)
+    coreutils \
+    # Ensure ca-certificates are present for HTTPS connections
+    ca-certificates \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
 RUN mkdir -p /root/.dolphin-emu/Config \
     && mkdir -p /app/games \
-    && mkdir -p /app/states \
+    && mkdir -p /app/savestates \
     && mkdir -p /app/output/screenshots \
     && mkdir -p /app/logs
+
+COPY --from=builder /dolphin-src/build/Binaries/dolphin-emu /app/dolphin-emu
+COPY --from=builder /dolphin-src/build/Binaries/dolphin-emu-nogui /app/dolphin-emu-nogui
+COPY --from=builder /dolphin-src/Data/Sys /app/Sys
 
 COPY deploy/configs/Dolphin.ini /root/.dolphin-emu/Config/Dolphin.ini
 COPY deploy/base/entrypoint.sh /app/entrypoint.sh
 
 RUN chmod +x /app/entrypoint.sh
-RUN chmod +x /app/dolphin-emu-nogui
-
-WORKDIR /app
-RUN rm -rf /dolphin-src
 
 EXPOSE 58111
 
