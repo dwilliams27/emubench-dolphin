@@ -52,14 +52,16 @@ RUN cp build/Binaries/dolphin-emu /app/ && \
 
 RUN mkdir -p /root/.dolphin-emu/Config \
     && mkdir -p /games \
+    && mkdir -p /states \
     && mkdir -p /output/screenshots \
     && mkdir -p /logs
 
 COPY deploy/configs/Dolphin.ini /root/.dolphin-emu/Config/Dolphin.ini
-COPY deploy/arm/entrypoint.sh /app/entrypoint.sh
+COPY deploy/base/entrypoint.sh /app/entrypoint.sh
 
 # Debug
 # COPY games/worms_3d.rvz /games/worms_3d.rvz
+# COPY states/game_test.sav /states/game_test.sav
 
 RUN chmod +x /app/entrypoint.sh
 RUN chmod +x /app/dolphin-emu-nogui
