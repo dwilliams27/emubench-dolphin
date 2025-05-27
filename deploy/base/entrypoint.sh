@@ -7,6 +7,10 @@ if [ -n "$SAVE_STATE_LOCAL_PATH" ]; then
     echo "Using local save state: $SAVE_STATE_FILE"
 fi
 
+if [ -n "$SAVE_STATE_FILE" ]; then
+    SAVE_STATE_FILE=/app/savestates/$SAVE_STATE_FILE
+fi
+
 if [ -z "$SAVE_STATE_FILE" ]; then
     SAVE_STATE_FILE=$(find /app/savestates -name "*.sav" | head -1)
 fi
