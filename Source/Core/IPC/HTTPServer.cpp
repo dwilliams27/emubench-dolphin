@@ -2,6 +2,8 @@
 
 #include <iostream>
 #include <future>
+#include <chrono>
+#include <thread>
 
 namespace IPC {
 
@@ -45,7 +47,14 @@ void HTTPServer::Stop() {
 	m_thread.reset();
 }
 
-void HTTPServer::ServerThread(int port) {
+void HTTPServer::ServerThread(int port) {	
+	// wow that was harder than it should have been
+	std::thread([]() {
+		std::this_thread::sleep_for(std::chrono::milliseconds(500));
+		Core::System& system = Core::System::GetInstance();
+		Core::SetState(system, Core::State::Paused);
+	}).detach();
+
 	m_server.Get("/", [](const httplib::Request& req, httplib::Response& res) {
 		res.set_content("Hello World from Dolphin IPC Server!", "text/plain");
 	});
