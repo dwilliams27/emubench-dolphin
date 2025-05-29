@@ -37,7 +37,7 @@ void MemWatcher::WatchAddress(std::string name, const MemoryWatch& mw)
 void MemWatcher::UpdateDmcpValues(const Core::CPUThreadGuard& guard)
 {
   for (auto& [name, mw] : m_memwatches)
-  {    
+  {
     UpdateDmcpValue(guard, mw);
   }
 }
@@ -111,7 +111,17 @@ std::string MemWatcher::ReadNBytesAsHex(const Core::CPUThreadGuard& guard, u32 a
 
 void MemWatcher::Step(const Core::CPUThreadGuard& guard)
 {
+  if (!m_step_called) {
+    m_step_called = true;
+    m_frames_started.set_value();
+  }
   UpdateDmcpValues(guard);
+}
+
+void MemWatcher::ResetFramesStarted()
+{
+  m_step_called = false;
+  m_frames_started = std::promise<void>();
 }
 
 } // namespace IPC

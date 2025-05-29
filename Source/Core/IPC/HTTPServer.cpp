@@ -1,10 +1,5 @@
 #include "IPC/HTTPServer.h"
 
-#include <iostream>
-#include <future>
-#include <chrono>
-#include <thread>
-
 namespace IPC {
 
 HTTPServer& HTTPServer::GetInstance(MainWindow& win) {
@@ -47,16 +42,16 @@ void HTTPServer::Stop() {
 	m_thread.reset();
 }
 
-void HTTPServer::ServerThread(int port) {	
-	// wow that was harder than it should have been
-	std::thread([]() {
-		std::this_thread::sleep_for(std::chrono::milliseconds(500));
-		Core::System& system = Core::System::GetInstance();
-		Core::SetState(system, Core::State::Paused);
-	}).detach();
+void HTTPServer::ServerThread(int port) {
+	HTTPServer::SetupTest();
 
 	m_server.Get("/", [](const httplib::Request& req, httplib::Response& res) {
 		res.set_content("Hello World from Dolphin IPC Server!", "text/plain");
+	});
+
+	m_server.Get("/api/test/start-state", [this](const httplib::Request& req, httplib::Response& res) {
+		NOTICE_LOG_FMT(CORE, "IPC: Starting test...");
+		// TODO
 	});
 
   m_server.Get("/api/screenshot", [](const httplib::Request& req, httplib::Response& res) {
@@ -152,55 +147,8 @@ void HTTPServer::ServerThread(int port) {
 		res.set_content("{\"status\":\"ok\"}", "application/json");
 	});
 
-	m_server.Post("/api/memwatch/setup", [this](const httplib::Request& req, httplib::Response& res) {
-		std::optional<nlohmann::json_abi_v3_12_0::json> json_data = ParseJson(req.body);
-		if (!json_data) {
-			res.status = 400;
-      res.set_content("{\"error\":\"Invalid JSON payload\"}", "application/json");
-      return;
-		}
-
-		if (json_data->contains("watches") && (*json_data)["watches"].is_object()) {
-			for (auto& watch : (*json_data)["watches"].items()) {
-				if (!watch.value().contains("address") || !watch.value()["address"].is_string()) {
-					res.status = 400;
-					res.set_content("{\"error\":\"Invalid JSON value: address is required\"}", "application/json");
-					return;
-				}
-				std::string address = watch.value()["address"].get<std::string>();
-
-				std::optional<std::string> offset = std::nullopt;
-				if (watch.value().contains("offset") && watch.value()["offset"].is_string()) {
-					offset = watch.value()["offset"].get<std::string>();
-				}
-
-				if (!watch.value().contains("size") || !watch.value()["size"].is_number()) {
-					res.status = 400;
-					res.set_content("{\"error\":\"Invalid JSON value: size is required\"}", "application/json");
-					return;
-				}
-				int size = watch.value()["size"].get<int>();
-				std::optional<std::string> current_value = std::nullopt;
-
-				MemoryWatch mw;
-				mw.address = address;
-				mw.offset = offset;
-				mw.size = size;
-				mw.current_value = current_value;
-
-				IPC::MemWatcher::GetInstance().WatchAddress(watch.key(), mw);
-			}
-		} else {
-			res.status = 400;
-      res.set_content("{\"error\":\"Invalid JSON value: addresses must be an object\"}", "application/json");
-      return;
-		}
-
-		res.set_content("{\"status\":\"ok\"}", "application/json");
-	});
-
 	// Gets value of an active memwatch
-	m_server.Get("/api/memwatch/values", [](const httplib::Request& req, httplib::Response& res) {
+	m_server.Get("/api/memwatch/values", [this](const httplib::Request& req, httplib::Response& res) {
 		if (req.has_param("names")) {
 			std::string names_param = req.get_param_value("names");
         
@@ -213,17 +161,7 @@ void HTTPServer::ServerThread(int port) {
 				names.push_back(name);
 			}
 			
-			std::map<std::string, std::string> results;
-			for (auto& nm : names) {
-				std::optional<std::string> value = IPC::MemWatcher::GetInstance().FetchDmcpValue(nm);
-				if (value.has_value()) {
-					results[nm] = value.value();
-				} else {
-					res.status = 400;
-					res.set_content("{\"error\":\"Couldn't read value of an address\"}", "application/json");
-					return;
-				}
-			}
+			std::map<std::string, std::string> results = HTTPServer::ReadMemWatches(names);
 
 			nlohmann::json response = {{"values", results}};
 			res.set_content(response.dump(), "application/json");
@@ -384,6 +322,93 @@ std::optional<nlohmann::json_abi_v3_12_0::json> HTTPServer::ParseJson(std::strin
 	}
 	
 	return nlohmann::json::parse(rawBody);
+}
+
+std::vector<std::string> HTTPServer::SetupMemWatchesFromJSON(const nlohmann::json_abi_v3_12_0::json& json_data) {
+	std::vector<std::string> names;
+	for (auto& watch : json_data["watches"].items()) {
+		if (!watch.value().contains("address") || !watch.value()["address"].is_string()) {
+			NOTICE_LOG_FMT(CORE, "IPC: Failed to read address for watch {}", watch.key());
+			return {};
+		}
+		std::string address = watch.value()["address"].get<std::string>();
+
+		if (!watch.value().contains("size") || !watch.value()["size"].is_number()) {
+			NOTICE_LOG_FMT(CORE, "IPC: Failed to read size for watch {}", watch.key());
+			return {};
+		}
+		int size = watch.value()["size"].get<int>();
+
+		std::optional<std::string> offset = std::nullopt;
+		if (watch.value().contains("offset") && watch.value()["offset"].is_string()) {
+			offset = watch.value()["offset"].get<std::string>();
+		}
+
+		std::optional<std::string> current_value = std::nullopt;
+
+		MemoryWatch mw;
+		mw.address = address;
+		mw.offset = offset;
+		mw.size = size;
+		mw.current_value = current_value;
+
+		IPC::MemWatcher::GetInstance().WatchAddress(watch.key(), mw);
+		names.push_back(watch.key());
+	}
+	return names;
+}
+
+std::map<std::string, std::string> HTTPServer::ReadMemWatches(std::vector<std::string> watch_names) {
+	std::map<std::string, std::string> results;
+	for (const auto& watch_name : watch_names) {
+		std::optional<std::string> value = IPC::MemWatcher::GetInstance().FetchDmcpValue(watch_name);
+		if (value.has_value()) {
+			results[watch_name] = value.value();
+		} else {
+			NOTICE_LOG_FMT(CORE, "IPC: Failed to read value for watch {}", watch_name);
+		}
+	}
+	return results;
+}
+
+void HTTPServer::SetupTest() {
+	IPC::MemWatcher::GetInstance().GetFramesStartedFuture().wait();
+	Core::System& system = Core::System::GetInstance();
+	Core::SetState(system, Core::State::Paused);
+
+	NOTICE_LOG_FMT(CORE, "IPC: Setting up test");
+	// Startup values
+	m_initial_watches = {};
+
+	const char* value = std::getenv("MEMWATCHES");
+	std::optional<nlohmann::json_abi_v3_12_0::json> json_data = ParseJson(value);
+	std::vector<std::string> names = {};
+	if (json_data && json_data->contains("watches")) {
+		names = SetupMemWatchesFromJSON(*json_data);
+		NOTICE_LOG_FMT(CORE, "IPC: Loaded {} memwatches from MEMWATCHES", names.size());
+	} else {
+		NOTICE_LOG_FMT(CORE, "IPC: No memwatches found in MEMWATCHES");
+	}
+
+	std::promise<void> promise;
+	std::future<void> future = promise.get_future();
+	Common::Event* completion_event_ptr = nullptr;
+	
+	// Queue the screenshot operation on the Host thread
+	Core::QueueHostJob([&promise, &completion_event_ptr](Core::System& system) {
+		completion_event_ptr = &Core::SaveScreenShotWithCallback("start");
+		promise.set_value();
+	}, true);
+
+	future.get();
+	Core::SetState(system, Core::State::Running);
+	completion_event_ptr->Wait();
+	IPC::MemWatcher::GetInstance().ResetFramesStarted();
+	IPC::MemWatcher::GetInstance().GetFramesStartedFuture().wait();
+	Core::SetState(system, Core::State::Paused);
+
+	m_initial_watches = HTTPServer::ReadMemWatches(names);
+	NOTICE_LOG_FMT(CORE, "IPC: Initial memwatches: {}", m_initial_watches.size());
 }
 
 } // namespace IPC

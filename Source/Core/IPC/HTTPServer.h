@@ -6,6 +6,10 @@
 #include <thread>
 #include <atomic>
 #include <optional>
+#include <iostream>
+#include <future>
+#include <chrono>
+#include <thread>
 
 #include <nlohmann/json.hpp>
 #include "httplib.h"
@@ -59,6 +63,12 @@ private:
     std::atomic<bool> m_running{false};
     std::unique_ptr<std::thread> m_thread;
     std::optional<nlohmann::json_abi_v3_12_0::json> ParseJson(std::string rawBody);
+
+    std::map<std::string, std::string> ReadMemWatches(std::vector<std::string> watch_names);
+    std::vector<std::string> SetupMemWatchesFromJSON(const nlohmann::json_abi_v3_12_0::json& json_data);
+    void SetupTest();
+
+    std::map<std::string, std::string> m_initial_watches;
 };
 
 } // namespace IPC
