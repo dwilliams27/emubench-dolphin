@@ -736,8 +736,11 @@ State GetState(Core::System& system)
 // [dmcp]
 std::string GenerateScreenshotFolderPath()
 {
-  const std::string& gameId = SConfig::GetInstance().GetGameID();
-  std::string path = File::GetUserPath(D_SCREENSHOTS_IDX) + gameId + DIR_SEP_CHR;
+  const char* session_id = std::getenv("SESSION_ID");
+  if (!session_id) {
+    session_id = "default-session";
+  }
+  std::string path = File::GetUserPath(D_SCREENSHOTS_IDX) + session_id + DIR_SEP_CHR;
 
   if (!File::CreateFullPath(path))
   {
