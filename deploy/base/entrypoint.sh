@@ -33,4 +33,4 @@ fi
 echo "Running game: $GAME_FILE"
 
 Xvfb :99 -screen 0 1280x720x24 & export DISPLAY=:99
-exec /app/dolphin-emu-nogui -e $GAME_FILE --save_state $SAVE_STATE_FILE "$@"
+exec /app/dolphin-emu-nogui -e $GAME_FILE --save_state $SAVE_STATE_FILE --config Logger.Options.WriteToFile=true "$@"

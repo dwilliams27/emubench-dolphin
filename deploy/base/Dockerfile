@@ -91,8 +91,7 @@ WORKDIR /app
 RUN mkdir -p /root/.dolphin-emu/Config \
     && mkdir -p /app/games \
     && mkdir -p /app/savestates \
-    && mkdir -p /app/output/screenshots \
-    && mkdir -p /app/logs
+    && mkdir -p /app/emu
 
 COPY --from=builder /dolphin-src/build/Binaries/dolphin-emu /app/dolphin-emu
 COPY --from=builder /dolphin-src/build/Binaries/dolphin-emu-nogui /app/dolphin-emu-nogui
@@ -102,6 +101,8 @@ COPY deploy/configs/Dolphin.ini /root/.dolphin-emu/Config/Dolphin.ini
 COPY deploy/base/entrypoint.sh /app/entrypoint.sh
 
 RUN chmod +x /app/entrypoint.sh
+
+ENV DOLPHIN_EMU_USERPATH="/app/emu"
 
 EXPOSE 58111
 
