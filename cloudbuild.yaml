@@ -1,0 +1,36 @@
+steps:
+  # Build the base image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [
+      'build',
+      '-t', 'gcr.io/$PROJECT_ID/emubench-dolphin-base:${_TAG}',
+      '-t', 'gcr.io/$PROJECT_ID/emubench-dolphin-base:latest',
+      '-f', './deploy/base/Dockerfile',
+      '.'
+    ]
+    timeout: '3600s'  # 1 hour timeout for the build
+
+  # Push the tagged image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/emubench-dolphin-base:${_TAG}']
+
+  # Push the latest tag
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/emubench-dolphin-base:latest']
+
+# Use a more powerful machine for the build
+options:
+  machineType: 'E2_HIGHCPU_8'  # 8 vCPU, 8GB RAM
+  diskSizeGb: 100
+
+# Specify longer timeout for the entire build
+timeout: '7200s'  # 2 hours
+
+# Images to push to registry
+images:
+  - 'gcr.io/$PROJECT_ID/emubench-dolphin-base:${_TAG}'
+  - 'gcr.io/$PROJECT_ID/emubench-dolphin-base:latest'
+
+# Default substitutions
+substitutions:
+  _TAG: 'latest'
