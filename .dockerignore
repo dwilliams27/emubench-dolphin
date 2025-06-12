@@ -23,15 +23,8 @@ Build/
 ehthumbs.db
 Thumbs.db
 
-# Node modules if any
-node_modules/
-
 # Logs
 *.log
-
-# Large external dependencies that get downloaded during build
-Externals/**/build/
-Externals/**/.git/
 
 # Documentation that's not needed for build
 docs/

@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     cmake \
     git \
     pkg-config \
+    gettext \
     libavcodec-dev \
     libavformat-dev \
     libavutil-dev \
