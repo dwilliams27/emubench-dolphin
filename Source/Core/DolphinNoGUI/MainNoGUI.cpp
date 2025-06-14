@@ -329,6 +329,8 @@ int main(int argc, char* argv[])
   if (!IPC::HTTPServer::GetInstance().Start(58111)) {
     ERROR_LOG_FMT(CORE, "Failed to start IPC server");
   } else {
+    fprintf(stdout, "IPC server initialized on port 58111");
+    fflush(stdout);
     INFO_LOG_FMT(CORE, "IPC server initialized on port 58111");
   }
 
