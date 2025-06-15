@@ -45,7 +45,7 @@ public:
     HTTPServer& operator=(const HTTPServer&) = delete;
     
     // Start/stop the server
-    bool Start(int port = 58111);
+    bool Start(int port = 8080);
     void Stop();
     
     // Check if server is running

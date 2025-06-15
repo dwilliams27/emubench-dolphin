@@ -105,7 +105,7 @@ RUN chmod +x /app/entrypoint.sh
 
 ENV DOLPHIN_EMU_USERPATH="/app/emu"
 
-EXPOSE 58111
+EXPOSE 8080
 
 ENTRYPOINT ["/app/entrypoint.sh"]
 CMD []

@@ -326,12 +326,12 @@ int main(int argc, char* argv[])
   DolphinAnalytics::Instance().ReportDolphinStart("nogui");
 
   // [dmcp]
-  if (!IPC::HTTPServer::GetInstance().Start(58111)) {
+  if (!IPC::HTTPServer::GetInstance().Start(8080)) {
     ERROR_LOG_FMT(CORE, "Failed to start IPC server");
   } else {
-    fprintf(stdout, "IPC server initialized on port 58111");
+    fprintf(stdout, "IPC server initialized on port 8080");
     fflush(stdout);
-    INFO_LOG_FMT(CORE, "IPC server initialized on port 58111");
+    INFO_LOG_FMT(CORE, "IPC server initialized on port 8080");
   }
 
   if (!BootManager::BootCore(Core::System::GetInstance(), std::move(boot), wsi))
