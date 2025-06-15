@@ -38,6 +38,8 @@ class FileLogListener : public LogListener
 public:
   FileLogListener(const std::string& filename)
   {
+    // [dmcp] Why
+    File::CreateFullPath(filename);
     File::OpenFStream(m_logfile, filename, std::ios::app);
     SetEnable(true);
   }
@@ -160,8 +162,9 @@ LogManager::LogManager()
   LogLevel verbosity = Config::Get(LOGGER_VERBOSITY);
 
   SetLogLevel(verbosity);
-  EnableListener(LogListener::FILE_LISTENER, Config::Get(LOGGER_WRITE_TO_FILE));
-  EnableListener(LogListener::CONSOLE_LISTENER, Config::Get(LOGGER_WRITE_TO_CONSOLE));
+  // [dmcp] Always enable file and console listeners
+  EnableListener(LogListener::FILE_LISTENER, true);
+  EnableListener(LogListener::CONSOLE_LISTENER, true);
   EnableListener(LogListener::LOG_WINDOW_LISTENER, Config::Get(LOGGER_WRITE_TO_WINDOW));
 
   for (auto& container : m_log)
@@ -169,6 +172,10 @@ LogManager::LogManager()
     container.m_enable = Config::Get(
         Config::Info<bool>{{Config::System::Logger, "Logs", container.m_short_name}, false});
   }
+
+  // [dmcp] Always turn on Core and IPC
+  SetEnable(LogType::CORE, true);
+  SetEnable(LogType::IPC, true);
 
   m_path_cutoff_point = DeterminePathCutOffPoint();
 }

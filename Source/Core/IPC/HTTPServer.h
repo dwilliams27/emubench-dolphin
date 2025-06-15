@@ -68,9 +68,6 @@ private:
     std::vector<std::string> SetupMemWatchesFromJSON(const nlohmann::json_abi_v3_12_0::json& json_data);
     void SetupTest();
 
-    // TODO: Fix actual logger system lol
-    void HackeyLog(const std::string& message);
-
     std::map<std::string, std::string> m_initial_watches;
 };
 

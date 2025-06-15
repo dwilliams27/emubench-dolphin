@@ -18,11 +18,6 @@ HTTPServer::~HTTPServer() {
     Stop();
 }
 
-void HTTPServer::HackeyLog(const std::string& message) {
-    fprintf(stdout, "IPC: %s\n", message.c_str());
-    fflush(stdout);
-}
-
 bool HTTPServer::Start(int port) {
 	if (m_running)
 		return false;
@@ -50,14 +45,14 @@ void HTTPServer::Stop() {
 void HTTPServer::ServerThread(int port) {
 	HTTPServer::SetupTest();
 
-	m_server.set_pre_routing_handler([this](const httplib::Request& req, httplib::Response& res) {
-		HTTPServer::HackeyLog("IPC: Received request: " + req.get_header_value("Host") + req.target);
+	m_server.set_pre_routing_handler([](const httplib::Request& req, httplib::Response& res) {
+		NOTICE_LOG_FMT(CORE, "IPC: Received request: {}{}", req.get_header_value("Host"), req.target);
 		
 		return httplib::Server::HandlerResponse::Unhandled;
 	});
 
-	m_server.Get("/", [this](const httplib::Request& req, httplib::Response& res) {
-		HTTPServer::HackeyLog("IPC: Received request for /");
+	m_server.Get("/", [](const httplib::Request& req, httplib::Response& res) {
+		NOTICE_LOG_FMT(CORE, "IPC: Hello World request received");
 		res.set_content("Hello World from Dolphin IPC Server!", "text/plain");
 	});
 
