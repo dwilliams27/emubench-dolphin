@@ -43,6 +43,7 @@ public:
     File::OpenFStream(m_logfile, filename, std::ios::app);
     SetEnable(true);
     m_last_flush_time = std::chrono::steady_clock::now();
+    m_filename = filename;
   }
 
   void Log(LogLevel, const char* msg) override
