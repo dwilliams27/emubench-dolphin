@@ -42,6 +42,7 @@ public:
     File::CreateFullPath(filename);
     File::OpenFStream(m_logfile, filename, std::ios::app);
     SetEnable(true);
+    m_last_flush_time = std::chrono::steady_clock::now();
   }
 
   void Log(LogLevel, const char* msg) override
@@ -50,6 +51,16 @@ public:
       return;
 
     std::lock_guard<std::mutex> lk(m_log_lock);
+    // [dmcp]
+    auto now = std::chrono::steady_clock::now();
+    
+    // Close and open file to ensure its pushed up to bucket frequently
+    if ((now - m_last_flush_time) >= std::chrono::seconds(5))
+    {
+      m_logfile.close();
+      File::OpenFStream(m_logfile, m_filename, std::ios::app);
+      m_last_flush_time = now;
+    }
     m_logfile << msg << std::flush;
   }
 
@@ -61,6 +72,8 @@ private:
   std::mutex m_log_lock;
   std::ofstream m_logfile;
   bool m_enable;
+  std::string m_filename;
+  std::chrono::steady_clock::time_point m_last_flush_time;
 };
 
 void GenericLogFmtImpl(LogLevel level, LogType type, const char* file, int line,
