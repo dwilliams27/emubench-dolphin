@@ -20,6 +20,7 @@
 #include "Core/BootManager.h"
 #include "Common/Event.h"
 #include "Common/FileUtil.h"
+#include "Common/IOFile.h"
 #include "Common/Logging/Log.h"
 #include "Common/Random.h"
 #include "Common/WindowSystemInfo.h"

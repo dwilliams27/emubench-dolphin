@@ -56,9 +56,16 @@ void HTTPServer::ServerThread(int port) {
 		res.set_content("Hello World from Dolphin IPC Server!", "text/plain");
 	});
 
-	m_server.Get("/api/test/start-state", [](const httplib::Request& req, httplib::Response& res) {
+	m_server.Get("/api/test/start", [](const httplib::Request& req, httplib::Response& res) {
 		NOTICE_LOG_FMT(CORE, "IPC: Starting test...");
-		// TODO
+
+		std::string user_path = File::GetUserPath(D_USER_IDX);
+		File::WriteStringToFile(user_path + "/test_state.json", R"({"state": "running"})");
+
+		Core::System& system = Core::System::GetInstance();
+		Core::SetState(system, Core::State::Running);
+
+		res.set_content("{\"status\":\"ok\"}", "application/json");
 	});
 
   m_server.Get("/api/screenshot", [](const httplib::Request& req, httplib::Response& res) {
@@ -416,6 +423,9 @@ void HTTPServer::SetupTest() {
 
 	m_initial_watches = HTTPServer::ReadMemWatches(names);
 	NOTICE_LOG_FMT(CORE, "IPC: Initial memwatches: {}", m_initial_watches.size());
+
+	std::string user_path = File::GetUserPath(D_USER_IDX);
+	File::WriteStringToFile(user_path + "/test_state.json", R"({"state": "ready"})");
 }
 
 } // namespace IPC
