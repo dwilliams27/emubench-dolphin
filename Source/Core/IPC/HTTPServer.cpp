@@ -390,6 +390,9 @@ void HTTPServer::SetupTest() {
 	Core::System& system = Core::System::GetInstance();
 	Core::SetState(system, Core::State::Paused);
 
+	std::string user_path = File::GetUserPath(D_USER_IDX);
+	File::WriteStringToFile(user_path + "/test_state.json", R"({"state": "booting"})");
+
 	NOTICE_LOG_FMT(CORE, "IPC: Setting up test");
 	// Startup values
 	m_initial_watches = {};
@@ -424,7 +427,6 @@ void HTTPServer::SetupTest() {
 	m_initial_watches = HTTPServer::ReadMemWatches(names);
 	NOTICE_LOG_FMT(CORE, "IPC: Initial memwatches: {}", m_initial_watches.size());
 
-	std::string user_path = File::GetUserPath(D_USER_IDX);
 	File::WriteStringToFile(user_path + "/test_state.json", R"({"state": "ready"})");
 }
 
