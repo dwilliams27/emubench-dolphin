@@ -427,7 +427,7 @@ void HTTPServer::SetupTest() {
 	m_initial_watches = HTTPServer::ReadMemWatches(names);
 	NOTICE_LOG_FMT(CORE, "IPC: Initial memwatches: {}", m_initial_watches.size());
 
-	File::WriteStringToFile(user_path + "/test_state.json", R"({"state": "ready"})");
+	File::WriteStringToFile(user_path + "/test_state.json", R"({"state": "emulator-ready"})");
 }
 
 } // namespace IPC
