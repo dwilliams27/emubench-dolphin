@@ -50,7 +50,14 @@ public:
     void Stop();
     
     // Check if server is running
-    bool IsRunning() const { return m_running; }
+    bool IsRunning() const { return m_running; };
+
+    Common::EventHook m_frame_end_handle;
+    bool m_real_time;
+    int m_screenshot_count = 0;
+    long long m_frame_count = 0;
+    long long m_frame_event = 0;
+    std::promise<void> m_wait_frames_promise;
 
 private:
     explicit HTTPServer(MainWindow* window = nullptr);
@@ -68,8 +75,11 @@ private:
     std::map<std::string, std::string> ReadMemWatches(std::vector<std::string> watch_names);
     std::vector<std::string> SetupMemWatchesFromJSON(const nlohmann::json_abi_v3_12_0::json& json_data);
     void SetupTest();
+    void AdvanceFrame();
+    void WaitXFrames(uint32_t frames);
 
     std::map<std::string, std::string> m_initial_watches;
+    bool m_waiting;
 };
 
 } // namespace IPC

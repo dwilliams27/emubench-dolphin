@@ -71,7 +71,7 @@ void HTTPServer::ServerThread(int port) {
   m_server.Get("/api/screenshot", [](const httplib::Request& req, httplib::Response& res) {
 		NOTICE_LOG_FMT(CORE, "IPC: Screenshot request received");
 		u32 rand_id = Common::Random::GenerateValue<u32>();
-		const std::string screenshot_name = fmt::format("ipc_screenshot_{:08x}", rand_id);
+		const std::string screenshot_name = m_screenshot_count++;
 		NOTICE_LOG_FMT(CORE, "IPC: Screenshot name: {}", screenshot_name);
 		
 		// Use a future/promise to wait for the job to complete
@@ -89,14 +89,7 @@ void HTTPServer::ServerThread(int port) {
 		completion_event_ptr->Wait();
 		
 		NOTICE_LOG_FMT(CORE, "IPC: Screenshot done signal");
-		std::string contents;
-		if (File::ReadFileToString(fmt::format("{}{}.png", Core::GenerateScreenshotFolderPath(), screenshot_name), contents))
-		{
-			res.set_content(contents, "image/png");
-		} else {
-			res.status = 500;
-			res.set_content("Failed to read screenshot", "text/plain");
-		}
+		res.set_content("{\"screenshotName\":\"" + screenshot_name + "\"}", "application/json");
 	});
 	
 	m_server.Post("/api/controller/:port", [this](const httplib::Request& req, httplib::Response& res) {
@@ -136,6 +129,12 @@ void HTTPServer::ServerThread(int port) {
       return;
 		}
 
+		// If turn-based, play the game
+		if (!m_real_time) {
+			Core::System& system = Core::System::GetInstance();
+			Core::SetState(system, Core::State::Running);
+		}
+
 		// Convert to ControllerInput structure
 		IPCControllerInput input = ParseIPCControllerInput(json_data);
 
@@ -152,16 +151,28 @@ void HTTPServer::ServerThread(int port) {
 				res.set_content("{\"error\":\"Invalid frames parameter; must be >0\"}", "application/json");
 				return;
 			}
+
+			// Wait frame_count frames
+			HTTPServer::WaitXFrames(frame_count);
+			// TODO: Does AdvanceFrame use same thread?
+			HTTPServer::m_wait_frames_promise.wait();
 		} else {
       // No 'frames' parameter, apply as persistent state
       Pad::UpdateControllerStateFromHTTP(port, status);
       NOTICE_LOG_FMT(CORE, "IPC: Applying persistent update for pad {}", port);
 		}
 
+		// TODO: Take a sync screenshot
+
+		// If turn-based, pause the game
+		if (!m_real_time) {
+			Core::System& system = Core::System::GetInstance();
+			Core::SetState(system, Core::State::Paused);
+		}
+
 		res.set_content("{\"status\":\"ok\"}", "application/json");
 	});
 
-	// Gets value of an active memwatch
 	m_server.Get("/api/memwatch/values", [this](const httplib::Request& req, httplib::Response& res) {
 		if (req.has_param("names")) {
 			std::string names_param = req.get_param_value("names");
@@ -385,10 +396,24 @@ std::map<std::string, std::string> HTTPServer::ReadMemWatches(std::vector<std::s
 	return results;
 }
 
+void HTTPServer::AdvanceFrame() {
+	HTTPServer::m_frame_count++;
+	if (HTTPServer::m_waiting && HTTPServer::m_frame_count >= HTTPServer::m_frame_event) {
+		HTTPServer::m_waiting = false;
+		HTTPServer::m_wait_frames_promise.set_value(nullptr);
+	}
+}
+
+void HTTPServer::WaitXFrames(uint32_t frames) {
+	HTTPServer::m_waiting = true;
+	HTTPServer::m_frame_event = HTTPServer::m_frame_count + frames;
+}
+
 void HTTPServer::SetupTest() {
 	IPC::MemWatcher::GetInstance().GetFramesStartedFuture().wait();
 	Core::System& system = Core::System::GetInstance();
 	Core::SetState(system, Core::State::Paused);
+	m_frame_end_handle = AfterFrameEvent::Register([this](Core::System&) { HTTPServer::AdvanceFrame(); }, "HTTPServerFrameCounter");
 
 	std::string user_path = File::GetUserPath(D_USER_IDX);
 	File::WriteStringToFile(user_path + "/test_state.json", R"({"state": "booting"})");
@@ -426,6 +451,9 @@ void HTTPServer::SetupTest() {
 
 	m_initial_watches = HTTPServer::ReadMemWatches(names);
 	NOTICE_LOG_FMT(CORE, "IPC: Initial memwatches: {}", m_initial_watches.size());
+
+	const char* mode = std::getenv("MODE");
+	m_real_time = mode && std::string(mode) == "real-time";
 
 	File::WriteStringToFile(user_path + "/test_state.json", R"({"state": "emulator-ready"})");
 }
