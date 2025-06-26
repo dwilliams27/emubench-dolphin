@@ -157,7 +157,7 @@ void HTTPServer::ServerThread(int port) {
 		std::map<std::string, std::string> endStateMemWatches = HTTPServer::ReadMemWatches(m_end_state_watch_names);
 		std::map<std::string, std::string> contextMemWatches = HTTPServer::ReadMemWatches(m_context_watch_names);
 
-		nlohmann::json response = {{"endStateMemWatches", endStateMemWatches}, {"contextMemWatches", contextMemWatches}};
+		nlohmann::json response = {{"endStateMemWatchValues", endStateMemWatches}, {"contextMemWatchValues", contextMemWatches}};
 
 		res.set_content(response.dump(), "application/json");
 	});
