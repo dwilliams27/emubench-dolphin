@@ -154,7 +154,12 @@ void HTTPServer::ServerThread(int port) {
 
 		HTTPServer::SaveNextScreenshot();
 
-		res.set_content("{\"status\":\"ok\"}", "application/json");
+		std::map<std::string, std::string> endStateMemWatches = HTTPServer::ReadMemWatches(m_end_watch_names);
+		std::map<std::string, std::string> contextStateMemWatches = HTTPServer::ReadMemWatches(m_context_watch_names);
+
+		nlohmann::json response = {{"endStateMemWatches", endStateMemWatches}, {"contextStateMemWatches", contextStateMemWatches}};
+
+		res.set_content(response.dump(), "application/json");
 	});
 
 	m_server.Get("/api/memwatch/values", [this](const httplib::Request& req, httplib::Response& res) {
@@ -333,9 +338,9 @@ std::optional<nlohmann::json_abi_v3_12_0::json> HTTPServer::ParseJson(std::strin
 	return nlohmann::json::parse(rawBody);
 }
 
-std::vector<std::string> HTTPServer::SetupMemWatchesFromJSON(const nlohmann::json_abi_v3_12_0::json& json_data) {
+std::vector<std::string> HTTPServer::SetupMemWatchesFromJSON(const nlohmann::json& watches_json) {
 	std::vector<std::string> names;
-	for (auto& watch : json_data["watches"].items()) {
+	for (auto& watch : watches_json.items()) {
 		if (!watch.value().contains("address") || !watch.value()["address"].is_string()) {
 			NOTICE_LOG_FMT(CORE, "IPC: Failed to read address for watch {}", watch.key());
 			return {};
@@ -405,16 +410,25 @@ void HTTPServer::SetupTest() {
 
 	NOTICE_LOG_FMT(CORE, "IPC: Setting up test");
 	// Startup values
-	m_initial_watches = {};
+	m_initial_end_watches = {};
+	m_initial_context_watches = {};
+	m_end_watch_names = {};
+	m_context_watch_names = {};
 
 	const char* value = std::getenv("MEMWATCHES");
 	std::optional<nlohmann::json_abi_v3_12_0::json> json_data = ParseJson(value);
-	std::vector<std::string> names = {};
-	if (json_data && json_data->contains("watches")) {
-		names = SetupMemWatchesFromJSON(*json_data);
-		NOTICE_LOG_FMT(CORE, "IPC: Loaded {} memwatches from MEMWATCHES", names.size());
+	std::vector<std::string> endStateWatchNames = {};
+	std::vector<std::string> contextStateWatchNames = {};
+	if (json_data && json_data->contains("endStateMemWatches") && json_data->contains("contextStateMemWatches")) {
+		// json_data["watches"].items()
+		m_end_watch_names = SetupMemWatchesFromJSON((*json_data)["endStateMemWatches"]);
+		NOTICE_LOG_FMT(CORE, "IPC: Loaded {} endStateMemWatches from MEMWATCHES", m_end_watch_names.size());
+		m_context_watch_names = SetupMemWatchesFromJSON((*json_data)["contextStateMemWatches"]);
+		NOTICE_LOG_FMT(CORE, "IPC: Loaded {} contextStateMemWatches from MEMWATCHES", m_context_watch_names.size());
+
+		
 	} else {
-		NOTICE_LOG_FMT(CORE, "IPC: No memwatches found in MEMWATCHES");
+		NOTICE_LOG_FMT(CORE, "IPC: No endStateMemWatches and contextStateMemWatches found in MEMWATCHES");
 	}
 
 	Core::SetState(system, Core::State::Running);
@@ -423,8 +437,11 @@ void HTTPServer::SetupTest() {
 	IPC::MemWatcher::GetInstance().GetFramesStartedFuture().wait();
 	Core::SetState(system, Core::State::Paused);
 
-	m_initial_watches = HTTPServer::ReadMemWatches(names);
-	NOTICE_LOG_FMT(CORE, "IPC: Initial memwatches: {}", m_initial_watches.size());
+	m_initial_end_watches = HTTPServer::ReadMemWatches(m_end_watch_names);
+	NOTICE_LOG_FMT(CORE, "IPC: Initial endState memwatches: {}", m_initial_end_watches.size());
+
+	m_initial_context_watches = HTTPServer::ReadMemWatches(m_context_watch_names);
+	NOTICE_LOG_FMT(CORE, "IPC: Initial contextState memwatches: {}", m_initial_context_watches.size());
 
 	const char* mode = std::getenv("MODE");
 	m_real_time = mode && std::string(mode) == "real-time";

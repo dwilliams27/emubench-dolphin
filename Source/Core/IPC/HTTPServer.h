@@ -86,7 +86,10 @@ private:
     void WaitXFrames(uint32_t frames);
     std::string SaveNextScreenshot();
 
-    std::map<std::string, std::string> m_initial_watches;
+    std::map<std::string, std::string> m_initial_end_watches;
+    std::map<std::string, std::string> m_initial_context_watches;
+    std::vector<std::string> m_end_watch_names;
+    std::vector<std::string> m_context_watch_names;
     bool m_waiting;
 };
 
