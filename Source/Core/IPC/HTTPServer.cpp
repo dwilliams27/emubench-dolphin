@@ -138,7 +138,6 @@ void HTTPServer::ServerThread(int port) {
 
 			// Wait frame_count frames
 			HTTPServer::WaitXFrames(frame_count);
-			// TODO: Does AdvanceFrame use same thread?
 			std::future<void> wait_frames_future = HTTPServer::m_wait_frames_promise.get_future();
 			wait_frames_future.wait();
 		} else {
@@ -147,13 +146,13 @@ void HTTPServer::ServerThread(int port) {
       NOTICE_LOG_FMT(CORE, "IPC: Applying persistent update for pad {}", port);
 		}
 
-		// TODO: Take a sync screenshot
-
 		// If turn-based, pause the game
 		if (!m_real_time) {
 			Core::System& system = Core::System::GetInstance();
 			Core::SetState(system, Core::State::Paused);
 		}
+
+		HTTPServer::SaveNextScreenshot();
 
 		res.set_content("{\"status\":\"ok\"}", "application/json");
 	});
@@ -392,6 +391,7 @@ void HTTPServer::AdvanceFrame() {
 void HTTPServer::WaitXFrames(uint32_t frames) {
 	HTTPServer::m_waiting = true;
 	HTTPServer::m_frame_event = HTTPServer::m_frame_count + frames;
+	HTTPServer::m_wait_frames_promise = std::promise<void>();
 }
 
 void HTTPServer::SetupTest() {
@@ -417,19 +417,8 @@ void HTTPServer::SetupTest() {
 		NOTICE_LOG_FMT(CORE, "IPC: No memwatches found in MEMWATCHES");
 	}
 
-	std::promise<void> promise;
-	std::future<void> future = promise.get_future();
-	Common::Event* completion_event_ptr = nullptr;
-	
-	// Queue the screenshot operation on the Host thread
-	Core::QueueHostJob([&promise, &completion_event_ptr](Core::System& system) {
-		completion_event_ptr = &Core::SaveScreenShotWithCallback("start");
-		promise.set_value();
-	}, true);
-
-	future.get();
 	Core::SetState(system, Core::State::Running);
-	completion_event_ptr->Wait();
+	HTTPServer::SaveNextScreenshot();
 	IPC::MemWatcher::GetInstance().ResetFramesStarted();
 	IPC::MemWatcher::GetInstance().GetFramesStartedFuture().wait();
 	Core::SetState(system, Core::State::Paused);
