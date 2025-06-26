@@ -362,13 +362,9 @@ void FrameDumper::SaveScreenshotWithCallback(std::string filename, Common::Event
 
 bool FrameDumper::IsFrameDumping() const
 {
-  if (m_screenshot_request.IsSet())
-    return true;
-
-  if (Config::Get(Config::MAIN_MOVIE_DUMP_FRAMES))
-    return true;
-
-  return false;
+  // [dmcp]
+  // TODO(perf): Fix m_screenshot_request timing, hackey
+  return true;
 }
 
 int FrameDumper::GetRequiredResolutionLeastCommonMultiple() const
