@@ -68,25 +68,9 @@ void HTTPServer::ServerThread(int port) {
 		res.set_content("{\"status\":\"ok\"}", "application/json");
 	});
 
-  m_server.Get("/api/screenshot", [](const httplib::Request& req, httplib::Response& res) {
+  m_server.Get("/api/screenshot", [this](const httplib::Request& req, httplib::Response& res) {
 		NOTICE_LOG_FMT(CORE, "IPC: Screenshot request received");
-		u32 rand_id = Common::Random::GenerateValue<u32>();
-		const std::string screenshot_name = m_screenshot_count++;
-		NOTICE_LOG_FMT(CORE, "IPC: Screenshot name: {}", screenshot_name);
-		
-		// Use a future/promise to wait for the job to complete
-		std::promise<void> promise;
-		std::future<void> future = promise.get_future();
-		Common::Event* completion_event_ptr = nullptr;
-		
-		// Queue the screenshot operation on the Host thread
-		Core::QueueHostJob([screenshot_name, &promise, &completion_event_ptr](Core::System& system) {
-			completion_event_ptr = &Core::SaveScreenShotWithCallback(screenshot_name);
-			promise.set_value();
-		}, true);
-
-		future.get();
-		completion_event_ptr->Wait();
+		std::string screenshot_name = HTTPServer::SaveNextScreenshot();
 		
 		NOTICE_LOG_FMT(CORE, "IPC: Screenshot done signal");
 		res.set_content("{\"screenshotName\":\"" + screenshot_name + "\"}", "application/json");
@@ -155,7 +139,8 @@ void HTTPServer::ServerThread(int port) {
 			// Wait frame_count frames
 			HTTPServer::WaitXFrames(frame_count);
 			// TODO: Does AdvanceFrame use same thread?
-			HTTPServer::m_wait_frames_promise.wait();
+			std::future<void> wait_frames_future = HTTPServer::m_wait_frames_promise.get_future();
+			wait_frames_future.wait();
 		} else {
       // No 'frames' parameter, apply as persistent state
       Pad::UpdateControllerStateFromHTTP(port, status);
@@ -400,7 +385,7 @@ void HTTPServer::AdvanceFrame() {
 	HTTPServer::m_frame_count++;
 	if (HTTPServer::m_waiting && HTTPServer::m_frame_count >= HTTPServer::m_frame_event) {
 		HTTPServer::m_waiting = false;
-		HTTPServer::m_wait_frames_promise.set_value(nullptr);
+		HTTPServer::m_wait_frames_promise.set_value();
 	}
 }
 
@@ -456,6 +441,26 @@ void HTTPServer::SetupTest() {
 	m_real_time = mode && std::string(mode) == "real-time";
 
 	File::WriteStringToFile(user_path + "/test_state.json", R"({"state": "emulator-ready"})");
+}
+
+std::string HTTPServer::SaveNextScreenshot() {
+	const std::string screenshot_name = std::to_string(m_screenshot_count++);
+	NOTICE_LOG_FMT(CORE, "IPC: Screenshot name: {}", screenshot_name);
+
+	static thread_local Common::Event completion_event;
+	completion_event.Reset();
+
+	if (g_frame_dumper) {
+		g_frame_dumper->SaveScreenshotWithCallback(
+			File::GetUserPath(D_SCREENSHOTS_IDX) + screenshot_name + ".png",
+			&completion_event
+		);
+		g_frame_dumper->m_frame_dump_start.Set();
+	}
+
+	completion_event.Wait();
+
+	return screenshot_name;
 }
 
 } // namespace IPC

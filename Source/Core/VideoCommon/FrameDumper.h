@@ -40,6 +40,10 @@ public:
 
   void DoState(PointerWrap& p);
 
+  // [dmcp]
+  // Used to kick frame dump thread.
+  Common::Event m_frame_dump_start;
+
 private:
   // NOTE: The methods below are called on the framedumping thread.
   void FrameDumpThreadFunc();
@@ -66,9 +70,6 @@ private:
 
   std::thread m_frame_dump_thread;
   Common::Flag m_frame_dump_thread_running;
-
-  // Used to kick frame dump thread.
-  Common::Event m_frame_dump_start;
 
   // Set by frame dump thread on frame completion.
   Common::Event m_frame_dump_done;

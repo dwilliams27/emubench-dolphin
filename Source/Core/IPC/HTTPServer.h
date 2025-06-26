@@ -15,23 +15,30 @@
 #include "httplib.h"
 
 #include "Common/Config/Config.h"
-#include "Core/Config/MainSettings.h"
-#include "Core/Boot/Boot.h"
-#include "Core/BootManager.h"
 #include "Common/Event.h"
 #include "Common/FileUtil.h"
 #include "Common/IOFile.h"
 #include "Common/Logging/Log.h"
 #include "Common/Random.h"
 #include "Common/WindowSystemInfo.h"
+#include "Common/HookableEvent.h"
+
+#include "Core/Config/MainSettings.h"
+#include "Core/Boot/Boot.h"
+#include "Core/BootManager.h"
 #include "Core/HW/GCPad.h"
 #include "Core/Core.h"
+
 #include "DolphinQt/MainWindow.h"
-#include "HTTPServer.h"
-#include "InputCommon/GCPadStatus.h"
+
 #include "IPC/ControllerCommands.h"
 #include "IPC/MemWatcher.h"
 #include "IPC/SaveState.h"
+
+#include "InputCommon/GCPadStatus.h"
+
+#include "VideoCommon/VideoEvents.h"
+#include "VideoCommon/FrameDumper.h"
 
 namespace IPC {
 
@@ -77,6 +84,7 @@ private:
     void SetupTest();
     void AdvanceFrame();
     void WaitXFrames(uint32_t frames);
+    std::string SaveNextScreenshot();
 
     std::map<std::string, std::string> m_initial_watches;
     bool m_waiting;
