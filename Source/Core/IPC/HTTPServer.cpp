@@ -400,6 +400,7 @@ void HTTPServer::WaitXFrames(uint32_t frames) {
 }
 
 void HTTPServer::SetupTest() {
+	File::CreateDir(File::GetUserPath(D_USER_IDX) + "ScreenShots");
 	IPC::MemWatcher::GetInstance().GetFramesStartedFuture().wait();
 	Core::System& system = Core::System::GetInstance();
 	Core::SetState(system, Core::State::Paused);
