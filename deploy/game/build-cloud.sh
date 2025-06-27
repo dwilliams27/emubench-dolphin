@@ -28,4 +28,4 @@ gcloud builds submit \
     --project=$PROJECT_ID \
     .
 
-echo "Build submitted to Cloud Build. Check the GCP Console for build status."
+echo "Done!"

@@ -1,2 +1,2 @@
-./deploy/game/build.sh "gamecube" "G4AEE9"
-# ./deploy/game/build.sh "gamecube" "GWMP8P"
+./build-cloud.sh "gamecube" "G4AEE9"
+# ./build-cloud.sh "gamecube" "GWMP8P"
