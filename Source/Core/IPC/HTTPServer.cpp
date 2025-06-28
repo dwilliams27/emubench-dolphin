@@ -138,8 +138,6 @@ void HTTPServer::ServerThread(int port) {
 
 			// Wait frame_count frames
 			HTTPServer::WaitXFrames(frame_count);
-			std::future<void> wait_frames_future = HTTPServer::m_wait_frames_promise.get_future();
-			wait_frames_future.wait();
 		} else {
       // No 'frames' parameter, apply as persistent state
       Pad::UpdateControllerStateFromHTTP(port, status);
@@ -152,12 +150,12 @@ void HTTPServer::ServerThread(int port) {
 			Core::SetState(system, Core::State::Paused);
 		}
 
-		HTTPServer::SaveNextScreenshot();
+		std::string screenshot_name = HTTPServer::SaveNextScreenshot();
 
 		std::map<std::string, std::string> endStateMemWatches = HTTPServer::ReadMemWatches(m_end_state_watch_names);
 		std::map<std::string, std::string> contextMemWatches = HTTPServer::ReadMemWatches(m_context_watch_names);
 
-		nlohmann::json response = {{"endStateMemWatchValues", endStateMemWatches}, {"contextMemWatchValues", contextMemWatches}};
+		nlohmann::json response = {{"endStateMemWatchValues", endStateMemWatches}, {"contextMemWatchValues", contextMemWatches}, {"screenshot", screenshot_name}};
 
 		res.set_content(response.dump(), "application/json");
 	});
@@ -397,6 +395,9 @@ void HTTPServer::WaitXFrames(uint32_t frames) {
 	HTTPServer::m_waiting = true;
 	HTTPServer::m_frame_event = HTTPServer::m_frame_count + frames;
 	HTTPServer::m_wait_frames_promise = std::promise<void>();
+
+	std::future<void> wait_frames_future = HTTPServer::m_wait_frames_promise.get_future();
+	wait_frames_future.wait();
 }
 
 void HTTPServer::SetupTest() {
@@ -427,6 +428,7 @@ void HTTPServer::SetupTest() {
 	}
 
 	Core::SetState(system, Core::State::Running);
+	HTTPServer::WaitXFrames(2);
 	HTTPServer::SaveNextScreenshot();
 	IPC::MemWatcher::GetInstance().ResetFramesStarted();
 	IPC::MemWatcher::GetInstance().GetFramesStartedFuture().wait();
