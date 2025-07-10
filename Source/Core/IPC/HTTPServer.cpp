@@ -12,7 +12,9 @@ HTTPServer& HTTPServer::GetInstance() {
     return instance;
 }
 
-HTTPServer::HTTPServer(MainWindow* window) : m_window(std::make_optional(window)) {}
+HTTPServer::HTTPServer(MainWindow* window) : m_window(std::make_optional(window)) {
+	m_firestore_client = std::make_unique<FirestoreClient>("emubench-459802");
+}
 
 HTTPServer::~HTTPServer() {
     Stop();
@@ -54,18 +56,6 @@ void HTTPServer::ServerThread(int port) {
 	m_server.Get("/", [](const httplib::Request& req, httplib::Response& res) {
 		NOTICE_LOG_FMT(CORE, "IPC: Hello World request received");
 		res.set_content("Hello World from Dolphin IPC Server!", "text/plain");
-	});
-
-	m_server.Get("/api/test/start", [](const httplib::Request& req, httplib::Response& res) {
-		NOTICE_LOG_FMT(CORE, "IPC: Starting test...");
-
-		std::string user_path = File::GetUserPath(D_USER_IDX);
-		File::WriteStringToFile(user_path + "/test_state.json", R"({"state": "running"})");
-
-		Core::System& system = Core::System::GetInstance();
-		Core::SetState(system, Core::State::Running);
-
-		res.set_content("{\"status\":\"ok\"}", "application/json");
 	});
 
   m_server.Get("/api/screenshot", [this](const httplib::Request& req, httplib::Response& res) {
@@ -401,14 +391,19 @@ void HTTPServer::WaitXFrames(uint32_t frames) {
 }
 
 void HTTPServer::SetupTest() {
+	const char* testId = std::getenv("TEST_ID");
+	nlohmann::json bootingTestState = {
+    {"status", "booting"},
+    {"contextMemWatchValues", m_initial_context_watches},
+    {"endStateMemWatchValues", m_initial_end_state_watches}
+	};
+	m_firestore_client->writeDocument("SESSIONS", testId, "STATE", "TEST_STATE", m_firestore_client->createFirestorePayload(bootingTestState));
+
 	File::CreateDir(File::GetUserPath(D_USER_IDX) + "ScreenShots");
 	IPC::MemWatcher::GetInstance().GetFramesStartedFuture().wait();
 	Core::System& system = Core::System::GetInstance();
 	Core::SetState(system, Core::State::Paused);
 	m_frame_end_handle = AfterFrameEvent::Register([this](Core::System&) { HTTPServer::AdvanceFrame(); }, "HTTPServerFrameCounter");
-
-	std::string user_path = File::GetUserPath(D_USER_IDX);
-	File::WriteStringToFile(user_path + "/test_state.json", R"({"state": "booting"})");
 
 	NOTICE_LOG_FMT(CORE, "IPC: Setting up test");
 	// Startup values
@@ -443,7 +438,12 @@ void HTTPServer::SetupTest() {
 	const char* mode = std::getenv("MODE");
 	m_real_time = mode && std::string(mode) == "real-time";
 
-	File::WriteStringToFile(user_path + "/test_state.json", R"({"state": "emulator-ready"})");
+	nlohmann::json readyTestState = {
+    {"status", "emulator-ready"},
+    {"contextMemWatchValues", m_initial_context_watches},
+    {"endStateMemWatchValues", m_initial_end_state_watches}
+	};
+	m_firestore_client->writeDocument("SESSIONS", testId, "STATE", "TEST_STATE", m_firestore_client->createFirestorePayload(readyTestState));
 }
 
 std::string HTTPServer::SaveNextScreenshot() {

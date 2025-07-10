@@ -34,6 +34,7 @@
 #include "IPC/ControllerCommands.h"
 #include "IPC/MemWatcher.h"
 #include "IPC/SaveState.h"
+#include "IPC/FirestoreClient.h"
 
 #include "InputCommon/GCPadStatus.h"
 
@@ -86,11 +87,12 @@ private:
     void WaitXFrames(uint32_t frames);
     std::string SaveNextScreenshot();
 
-    std::map<std::string, std::string> m_initial_end_state_watches;
-    std::map<std::string, std::string> m_initial_context_watches;
+    std::map<std::string, std::string> m_initial_end_state_watches = {};
+    std::map<std::string, std::string> m_initial_context_watches = {};
     std::vector<std::string> m_end_state_watch_names;
     std::vector<std::string> m_context_watch_names;
     bool m_waiting;
+    std::unique_ptr<FirestoreClient> m_firestore_client;
 };
 
 } // namespace IPC
