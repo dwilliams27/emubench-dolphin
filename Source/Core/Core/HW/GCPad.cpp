@@ -151,6 +151,8 @@ bool IsInitialized()
 
 GCPadStatus GetStatus(int pad_num)
 {
+  // [dmcp] DEBUG
+  // return static_cast<GCPad*>(s_config.GetController(pad_num))->GetInput();
   // [dmcp]
   if (pad_num < 0 || pad_num >= 4)
   {
