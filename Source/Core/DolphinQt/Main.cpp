@@ -264,11 +264,11 @@ int main(int argc, char* argv[])
                    static_cast<const char*>(options.get("movie"))};
 
     // [dmcp]
-    if (!IPC::HTTPServer::GetInstance(win).Start(8080)) {
-      ERROR_LOG_FMT(CORE, "Failed to start IPC server");
-    } else {
-      INFO_LOG_FMT(CORE, "IPC server initialized on port 8080");
-    }
+    // if (!IPC::HTTPServer::GetInstance(win).Start(8080)) {
+    //   ERROR_LOG_FMT(CORE, "Failed to start IPC server");
+    // } else {
+    //   INFO_LOG_FMT(CORE, "IPC server initialized on port 8080");
+    // }
 
 #if defined(USE_ANALYTICS) && USE_ANALYTICS
     if (!Config::Get(Config::MAIN_ANALYTICS_PERMISSION_ASKED))

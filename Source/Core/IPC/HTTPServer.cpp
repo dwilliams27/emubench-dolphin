@@ -169,7 +169,7 @@ void HTTPServer::ServerThread(int port) {
 			res.set_content(response.dump(), "application/json");
 		} else {
 			res.status = 400;
-      res.set_content("{\"error\":\"Must pass 'addresses' query param\"}", "application/json");
+      res.set_content("{\"error\":\"Must pass 'names' query param\"}", "application/json");
       return;
 		}
 	});

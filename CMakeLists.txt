@@ -27,6 +27,9 @@ endif()
 set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15.0" CACHE STRING "")
 
 set(CMAKE_USER_MAKE_RULES_OVERRIDE "${CMAKE_CURRENT_SOURCE_DIR}/CMake/FlagsOverride.cmake")
+# [dmcp] DEBUG
+# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fno-omit-frame-pointer -g")
+# set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address")
 
 project(dolphin-emu)
 
