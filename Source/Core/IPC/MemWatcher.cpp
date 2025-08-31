@@ -29,50 +29,89 @@ void MemWatcher::WatchAddress(std::string name, const MemoryWatch& mw)
 
     if (m_memwatches.count(name) > 0) {
       MemoryWatch& mw = m_memwatches[name];
-      UpdateDmcpValue(guard, mw);
+      UpdateValue(guard, mw);
     }
   }, true);
 }
 
-void MemWatcher::UpdateDmcpValues(const Core::CPUThreadGuard& guard)
+void MemWatcher::UpdateValues(const Core::CPUThreadGuard& guard)
 {
   for (auto& [name, mw] : m_memwatches)
   {
-    UpdateDmcpValue(guard, mw);
+    UpdateValue(guard, mw);
   }
 }
 
-void MemWatcher::UpdateDmcpValue(const Core::CPUThreadGuard& guard, MemoryWatch& mw)
+void MemWatcher::UpdateValue(const Core::CPUThreadGuard& guard, MemoryWatch& mw)
 {
-  if (mw.offset.has_value()) {
+  if (mw.offsets.has_value() && !mw.offsets->empty()) {
     std::string value = ChasePointer(guard, mw);
     mw.current_value = std::make_optional(value);
   } else {
-    mw.current_value = std::make_optional(ReadNBytesAsHex(guard, std::stoul(mw.address, nullptr, 16), mw.size));
+    u32 address = std::stoul(mw.address, nullptr, 16);
+    if (!PowerPC::MMU::HostIsRAMAddress(guard, address)) {
+      NOTICE_LOG_FMT(CORE, "IPC: Direct address out of bounds: 0x{:08X}", address);
+      mw.current_value = std::make_optional("0");
+      return;
+    }
+    mw.current_value = std::make_optional(ReadNBytesAsHex(guard, address, mw.size));
   }
 }
 
-std::optional<std::string> MemWatcher::FetchDmcpValue(const std::string& name)
+std::optional<std::string> MemWatcher::FetchValue(const std::string& name)
 {
   return m_memwatches[name].current_value;
 }
 
-// For now, just one level of chasing
 std::string MemWatcher::ChasePointer(const Core::CPUThreadGuard& guard, const MemoryWatch& mw)
 {
-  u32 raw_address = std::stoul(mw.address, nullptr, 16);
-  u32 raw_offset = mw.offset.has_value() ? std::stoul(mw.offset.value(), nullptr, 16) : 0;
-  u32 pointed_to_address = PowerPC::MMU::HostRead_U32(guard, raw_address);
-  if (!PowerPC::MMU::HostIsRAMAddress(guard, pointed_to_address + raw_offset)) {
-    NOTICE_LOG_FMT(CORE, "IPC: Pointer address out of bounds");
-    return 0;
+  u32 current_address = std::stoul(mw.address, nullptr, 16);
+
+  if (!PowerPC::MMU::HostIsRAMAddress(guard, current_address)) {
+    NOTICE_LOG_FMT(CORE, "IPC: Initial pointer address out of bounds: 0x{:08X}", current_address);
+    return "0";
   }
 
-  return ReadNBytesAsHex(guard, pointed_to_address + raw_offset, mw.size);
+  if (!mw.offsets.has_value()) {
+    // No offsets, just read directly from the address
+    return ReadNBytesAsHex(guard, current_address, mw.size);
+  }
+  
+  // Chase through each offset
+  for (const auto& offset : *mw.offsets) {
+    if (!PowerPC::MMU::HostIsRAMAddress(guard, current_address)) {
+      NOTICE_LOG_FMT(CORE, "IPC: Pointer address out of bounds during chase: 0x{:08X}", current_address);
+      return "0";
+    }
+    
+    // Read the pointer value at current address
+    u32 pointed_to_address = PowerPC::MMU::HostRead_U32(guard, current_address);
+    
+    // Calculate the next address by adding the offset
+    current_address = pointed_to_address + offset;
+    
+    // Check bounds for the next address
+    if (!PowerPC::MMU::HostIsRAMAddress(guard, current_address)) {
+      NOTICE_LOG_FMT(CORE, "IPC: Pointer address out of bounds during chase: 0x{:08X}", current_address);
+      return "0";
+    }
+  }
+
+  return ReadNBytesAsHex(guard, current_address, mw.size);
 }
 
 std::string MemWatcher::ReadNBytesAsHex(const Core::CPUThreadGuard& guard, u32 address, u32 size)
 {
+  if (!PowerPC::MMU::HostIsRAMAddress(guard, address)) {
+    NOTICE_LOG_FMT(CORE, "IPC: Read address out of bounds: 0x{:08X}", address);
+    return "0";
+  }
+  
+  if (size > 1 && !PowerPC::MMU::HostIsRAMAddress(guard, address + size - 1)) {
+    NOTICE_LOG_FMT(CORE, "IPC: Read end address out of bounds: 0x{:08X}", address + size - 1);
+    return "0";
+  }
+  
   std::stringstream ss;
   ss << std::hex << std::uppercase << std::setfill('0');
 
@@ -115,7 +154,7 @@ void MemWatcher::Step(const Core::CPUThreadGuard& guard)
     m_step_called = true;
     m_frames_started.set_value();
   }
-  UpdateDmcpValues(guard);
+  UpdateValues(guard);
 }
 
 void MemWatcher::ResetFramesStarted()

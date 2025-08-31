@@ -341,16 +341,16 @@ std::vector<std::string> HTTPServer::SetupMemWatchesFromJSON(const nlohmann::jso
 		}
 		int size = watch.value()["size"].get<int>();
 
-		std::optional<std::string> offset = std::nullopt;
-		if (watch.value().contains("offset") && watch.value()["offset"].is_string()) {
-			offset = watch.value()["offset"].get<std::string>();
+		std::optional<std::vector<u32>> offsets = std::nullopt;
+		if (watch.value().contains("offsets") && watch.value()["offsets"].is_array()) {
+			offsets = watch.value()["offsets"].get<std::vector<u32>>();
 		}
 
 		std::optional<std::string> current_value = std::nullopt;
 
 		MemoryWatch mw;
 		mw.address = address;
-		mw.offset = offset;
+		mw.offsets = offsets;
 		mw.size = size;
 		mw.current_value = current_value;
 
@@ -363,7 +363,7 @@ std::vector<std::string> HTTPServer::SetupMemWatchesFromJSON(const nlohmann::jso
 std::map<std::string, std::string> HTTPServer::ReadMemWatches(std::vector<std::string> watch_names) {
 	std::map<std::string, std::string> results;
 	for (const auto& watch_name : watch_names) {
-		std::optional<std::string> value = IPC::MemWatcher::GetInstance().FetchDmcpValue(watch_name);
+		std::optional<std::string> value = IPC::MemWatcher::GetInstance().FetchValue(watch_name);
 		if (value.has_value()) {
 			results[watch_name] = value.value();
 		} else {

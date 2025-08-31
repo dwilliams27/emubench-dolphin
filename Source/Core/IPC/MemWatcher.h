@@ -18,7 +18,7 @@ class CPUThreadGuard;
 struct MemoryWatch
 {
   std::string address;
-  std::optional<std::string> offset;
+  std::optional<std::vector<u32>> offsets;
   u32 size;
   std::optional<std::string> current_value;
 };
@@ -36,7 +36,7 @@ public:
   void Step(const Core::CPUThreadGuard& guard);
   void WatchAddress(std::string name, const MemoryWatch& mw);
   std::string ReadNBytesAsHex(const Core::CPUThreadGuard& guard, u32 address, u32 size);
-  std::optional<std::string> FetchDmcpValue(const std::string& name);
+  std::optional<std::string> FetchValue(const std::string& name);
   
   // Get future that resolves when Step runs for the first time
   std::shared_future<void> GetFramesStartedFuture() { return m_frames_started.get_future().share(); }
@@ -46,8 +46,8 @@ public:
 private:
   MemWatcher() = default;
 
-  void UpdateDmcpValues(const Core::CPUThreadGuard& guard);
-  void UpdateDmcpValue(const Core::CPUThreadGuard& guard, MemoryWatch& mw);
+  void UpdateValues(const Core::CPUThreadGuard& guard);
+  void UpdateValue(const Core::CPUThreadGuard& guard, MemoryWatch& mw);
   std::string ChasePointer(const Core::CPUThreadGuard& guard, const MemoryWatch& mw);
 
   std::map<std::string, MemoryWatch> m_memwatches;
