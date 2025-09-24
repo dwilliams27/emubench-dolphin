@@ -382,11 +382,25 @@ void HTTPServer::AdvanceFrame() {
 }
 
 void HTTPServer::WaitXFrames(uint32_t frames) {
-	HTTPServer::m_waiting = true;
-	HTTPServer::m_frame_event = HTTPServer::m_frame_count + frames;
-	HTTPServer::m_wait_frames_promise = std::promise<void>();
+	if (frames == 0) {
+		return;
+	}
 
+	HTTPServer::m_frame_event = HTTPServer::m_frame_count + frames;
+	if (HTTPServer::m_frame_count >= HTTPServer::m_frame_event) {
+		return;
+	}
+
+	HTTPServer::m_wait_frames_promise = std::promise<void>();
 	std::future<void> wait_frames_future = HTTPServer::m_wait_frames_promise.get_future();
+
+	HTTPServer::m_waiting = true;
+
+	if (HTTPServer::m_frame_count >= HTTPServer::m_frame_event) {
+		HTTPServer::m_waiting = false;
+		return;
+	}
+	
 	wait_frames_future.wait();
 }
 
