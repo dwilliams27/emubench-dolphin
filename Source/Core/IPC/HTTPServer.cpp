@@ -141,20 +141,7 @@ void HTTPServer::ServerThread(int port) {
 		}
 
 		std::string screenshot_name = HTTPServer::SaveNextScreenshot();
-
-		// Upload screenshot to GCS
-		const char* testId = std::getenv("TEST_ID");
-		if (testId) {
-			std::string screenshot_path = File::GetUserPath(D_SCREENSHOTS_IDX) + screenshot_name + ".png";
-			bool upload_success = m_firestore_client->postScreenshot(screenshot_path, testId);
-			if (upload_success) {
-				NOTICE_LOG_FMT(CORE, "IPC: Screenshot uploaded to GCS successfully");
-			} else {
-				NOTICE_LOG_FMT(CORE, "IPC: Failed to upload screenshot to GCS");
-			}
-		} else {
-			NOTICE_LOG_FMT(CORE, "IPC: TEST_ID environment variable not set, skipping GCS upload");
-		}
+		HTTPServer::UploadScreenshotToGcp(screenshot_name);
 
 		std::map<std::string, std::string> endStateMemWatches = HTTPServer::ReadMemWatches(m_end_state_watch_names);
 		std::map<std::string, std::string> contextMemWatches = HTTPServer::ReadMemWatches(m_context_watch_names);
@@ -453,11 +440,13 @@ void HTTPServer::SetupTest() {
 	}
 
 	Core::SetState(system, Core::State::Running);
-	HTTPServer::WaitXFrames(2);
-	HTTPServer::SaveNextScreenshot();
+	HTTPServer::WaitXFrames(3);
+	std::string initialScreenshot = HTTPServer::SaveNextScreenshot();
 	IPC::MemWatcher::GetInstance().ResetFramesStarted();
 	IPC::MemWatcher::GetInstance().GetFramesStartedFuture().wait();
 	Core::SetState(system, Core::State::Paused);
+
+	HTTPServer::UploadScreenshotToGcp(initialScreenshot);
 
 	m_initial_end_state_watches = HTTPServer::ReadMemWatches(m_end_state_watch_names);
 	NOTICE_LOG_FMT(CORE, "IPC: Initial endState memwatches: {}", m_initial_end_state_watches.size());
@@ -495,6 +484,23 @@ std::string HTTPServer::SaveNextScreenshot() {
 	completion_event.Wait();
 
 	return screenshot_name;
+}
+
+bool HTTPServer::UploadScreenshotToGcp(std::string screenshot_name) {
+	const char* testId = std::getenv("TEST_ID");
+	if (testId) {
+		std::string screenshot_path = File::GetUserPath(D_SCREENSHOTS_IDX) + screenshot_name + ".png";
+		bool upload_success = m_firestore_client->postScreenshot(screenshot_path, testId);
+		if (upload_success) {
+			NOTICE_LOG_FMT(CORE, "IPC: Screenshot uploaded to GCS successfully");
+		} else {
+			NOTICE_LOG_FMT(CORE, "IPC: Failed to upload screenshot to GCS");
+		}
+		return upload_success;
+	} else {
+		NOTICE_LOG_FMT(CORE, "IPC: TEST_ID environment variable not set, skipping GCS upload");
+		return false;
+	}
 }
 
 } // namespace IPC

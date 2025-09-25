@@ -198,10 +198,26 @@ public:
     long file_size = ftell(file);
     fseek(file, 0, SEEK_SET);
 
+    // Read file into memory
+    std::vector<char> file_buffer(file_size);
+    size_t bytes_read = fread(file_buffer.data(), 1, file_size, file);
+    fclose(file);
+
+    if (bytes_read != static_cast<size_t>(file_size)) {
+      NOTICE_LOG_FMT(CORE, "IPC: Failed to read complete file");
+      curl_easy_cleanup(curl);
+      return false;
+    }
+
+    // Set up response capture
+    std::string response_body;
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeCallback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response_body);
+
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-    curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
-    curl_easy_setopt(curl, CURLOPT_READDATA, file);
-    curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)file_size);
+    curl_easy_setopt(curl, CURLOPT_POST, 1L);
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, file_buffer.data());
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, file_size);
 
     struct curl_slist* headers = nullptr;
     std::string authHeader = "Authorization: Bearer " + accessToken;
@@ -211,16 +227,27 @@ public:
 
     CURLcode res = curl_easy_perform(curl);
 
-    fclose(file);
+    // Get HTTP response code
+    long response_code = 0;
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
+
     curl_easy_cleanup(curl);
     curl_slist_free_all(headers);
+
+    // Log response details
+    NOTICE_LOG_FMT(CORE, "IPC: GCS upload response code: {}", response_code);
 
     if (res != CURLE_OK) {
       NOTICE_LOG_FMT(CORE, "IPC: Screenshot upload failed: {}", curl_easy_strerror(res));
       return false;
     }
 
-    NOTICE_LOG_FMT(CORE, "IPC: Screenshot uploaded successfully");
-    return true;
+    if (response_code >= 200 && response_code < 300) {
+      NOTICE_LOG_FMT(CORE, "IPC: Screenshot uploaded successfully");
+      return true;
+    } else {
+      NOTICE_LOG_FMT(CORE, "IPC: Screenshot upload failed with HTTP code: {}", response_code);
+      return false;
+    }
   }
 };

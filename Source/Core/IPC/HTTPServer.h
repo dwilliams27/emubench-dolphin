@@ -86,6 +86,7 @@ private:
     void AdvanceFrame();
     void WaitXFrames(uint32_t frames);
     std::string SaveNextScreenshot();
+    bool UploadScreenshotToGcp(std::string screenshot_name);
 
     std::map<std::string, std::string> m_initial_end_state_watches = {};
     std::map<std::string, std::string> m_initial_context_watches = {};
