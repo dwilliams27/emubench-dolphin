@@ -11,7 +11,7 @@ static size_t writeCallback(void* contents, size_t size, size_t nmemb, std::stri
   return totalSize;
 }
 
-class FirestoreClient {
+class GcpClient {
 private:
   std::string projectId;
   std::string accessToken;
@@ -60,9 +60,9 @@ private:
   }
   
 public:
-  FirestoreClient(const std::string& project_id) : projectId(project_id) {
+  GcpClient(const std::string& project_id) : projectId(project_id) {
     accessToken = getAccessToken();
-    NOTICE_LOG_FMT(CORE, "IPC: Firestore client initialized");
+    NOTICE_LOG_FMT(CORE, "IPC: GCP client initialized");
   }
   
   std::string readDocument(const std::string& collection, const std::string& testId,
@@ -168,5 +168,59 @@ public:
     nlohmann::json firestoreDoc;
     firestoreDoc["fields"] = convertToFirestoreFields(data);
     return firestoreDoc.dump();
+  }
+
+  bool postScreenshot(const std::string& filePath, const std::string& testId) {
+    NOTICE_LOG_FMT(CORE, "IPC: Uploading screenshot to GCS");
+    CURL* curl = curl_easy_init();
+
+    if (!curl) {
+      NOTICE_LOG_FMT(CORE, "IPC: Unable to init curl");
+      return false;
+    }
+
+    // Extract filename from filepath
+    std::string screenshotName = filePath.substr(filePath.find_last_of("/") + 1);
+
+    std::string url = "https://storage.googleapis.com/upload/storage/v1/b/emubench-sessions/o?uploadType=media&name=" + testId + "/ScreenShots/" + screenshotName;
+    NOTICE_LOG_FMT(CORE, "IPC: GCS URL: {}", url);
+
+    // Open the file
+    FILE* file = fopen(filePath.c_str(), "rb");
+    if (!file) {
+      NOTICE_LOG_FMT(CORE, "IPC: Unable to open file: {}", filePath);
+      curl_easy_cleanup(curl);
+      return false;
+    }
+
+    // Get file size
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
+    curl_easy_setopt(curl, CURLOPT_READDATA, file);
+    curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)file_size);
+
+    struct curl_slist* headers = nullptr;
+    std::string authHeader = "Authorization: Bearer " + accessToken;
+    headers = curl_slist_append(headers, authHeader.c_str());
+    headers = curl_slist_append(headers, "Content-Type: image/png");
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+
+    CURLcode res = curl_easy_perform(curl);
+
+    fclose(file);
+    curl_easy_cleanup(curl);
+    curl_slist_free_all(headers);
+
+    if (res != CURLE_OK) {
+      NOTICE_LOG_FMT(CORE, "IPC: Screenshot upload failed: {}", curl_easy_strerror(res));
+      return false;
+    }
+
+    NOTICE_LOG_FMT(CORE, "IPC: Screenshot uploaded successfully");
+    return true;
   }
 };

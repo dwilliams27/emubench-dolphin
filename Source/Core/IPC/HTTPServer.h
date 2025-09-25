@@ -34,7 +34,7 @@
 #include "IPC/ControllerCommands.h"
 #include "IPC/MemWatcher.h"
 #include "IPC/SaveState.h"
-#include "IPC/FirestoreClient.h"
+#include "IPC/GcpClient.h"
 
 #include "InputCommon/GCPadStatus.h"
 
@@ -92,7 +92,7 @@ private:
     std::vector<std::string> m_end_state_watch_names;
     std::vector<std::string> m_context_watch_names;
     bool m_waiting;
-    std::unique_ptr<FirestoreClient> m_firestore_client;
+    std::unique_ptr<GcpClient> m_firestore_client;
 };
 
 } // namespace IPC

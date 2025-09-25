@@ -13,7 +13,7 @@ HTTPServer& HTTPServer::GetInstance() {
 }
 
 HTTPServer::HTTPServer(MainWindow* window) : m_window(std::make_optional(window)) {
-	m_firestore_client = std::make_unique<FirestoreClient>("emubench-459802");
+	m_firestore_client = std::make_unique<GcpClient>("emubench-459802");
 }
 
 HTTPServer::~HTTPServer() {
@@ -141,6 +141,20 @@ void HTTPServer::ServerThread(int port) {
 		}
 
 		std::string screenshot_name = HTTPServer::SaveNextScreenshot();
+
+		// Upload screenshot to GCS
+		const char* testId = std::getenv("TEST_ID");
+		if (testId) {
+			std::string screenshot_path = File::GetUserPath(D_SCREENSHOTS_IDX) + screenshot_name + ".png";
+			bool upload_success = m_firestore_client->postScreenshot(screenshot_path, testId);
+			if (upload_success) {
+				NOTICE_LOG_FMT(CORE, "IPC: Screenshot uploaded to GCS successfully");
+			} else {
+				NOTICE_LOG_FMT(CORE, "IPC: Failed to upload screenshot to GCS");
+			}
+		} else {
+			NOTICE_LOG_FMT(CORE, "IPC: TEST_ID environment variable not set, skipping GCS upload");
+		}
 
 		std::map<std::string, std::string> endStateMemWatches = HTTPServer::ReadMemWatches(m_end_state_watch_names);
 		std::map<std::string, std::string> contextMemWatches = HTTPServer::ReadMemWatches(m_context_watch_names);
