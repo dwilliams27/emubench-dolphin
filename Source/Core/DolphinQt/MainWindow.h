@@ -88,6 +88,26 @@ public:
   bool eventFilter(QObject* object, QEvent* event) override;
   QMenu* createPopupMenu() override;
 
+  // [dmcp]
+  enum class ScanForSecondDisc
+  {
+    Yes,
+    No,
+  };
+  
+  void StartGame(const QString& path, ScanForSecondDisc scan,
+    std::unique_ptr<BootSessionData> boot_session_data = nullptr);
+  void StartGame(const std::string& path, ScanForSecondDisc scan,
+      std::unique_ptr<BootSessionData> boot_session_data = nullptr);
+  void StartGame(const std::vector<std::string>& paths,
+      std::unique_ptr<BootSessionData> boot_session_data = nullptr);
+  void StartGame(std::unique_ptr<BootParameters>&& parameters);
+
+public slots:
+  // Special slot for thread-safe invocation
+  void StartGameOnMainThread(const std::string& path);
+  void ShowRenderWidgetOnMainThread();
+
 signals:
   void ReadOnlyModeChanged(bool read_only);
   void RecordingStatusChanged(bool recording);
@@ -142,21 +162,8 @@ private:
 
   void InitCoreCallbacks();
 
-  enum class ScanForSecondDisc
-  {
-    Yes,
-    No,
-  };
-
   void ScanForSecondDiscAndStartGame(const UICommon::GameFile& game,
                                      std::unique_ptr<BootSessionData> boot_session_data = nullptr);
-  void StartGame(const QString& path, ScanForSecondDisc scan,
-                 std::unique_ptr<BootSessionData> boot_session_data = nullptr);
-  void StartGame(const std::string& path, ScanForSecondDisc scan,
-                 std::unique_ptr<BootSessionData> boot_session_data = nullptr);
-  void StartGame(const std::vector<std::string>& paths,
-                 std::unique_ptr<BootSessionData> boot_session_data = nullptr);
-  void StartGame(std::unique_ptr<BootParameters>&& parameters);
   void ShowRenderWidget();
   void HideRenderWidget(bool reinit = true, bool is_exit = false);
 

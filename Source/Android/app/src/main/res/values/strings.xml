@@ -801,6 +801,8 @@ It can efficiently compress both junk data and encrypted Wii data.
     <string name="gcpad_dance_mat">Dance Mat</string>
     <string name="gcpad_taru_konga">DK Bongos</string>
     <string name="gcpad_gc_adapter">GameCube Adapter</string>
+    <!-- [dmcp] -->
+    <string name="gcpad_ipc">IPC GC Controller</string>
 
     <!-- Wiimote Types -->
     <string name="wiimote_disabled">None</string>

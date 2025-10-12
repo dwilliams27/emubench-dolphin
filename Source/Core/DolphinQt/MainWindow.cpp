@@ -1113,6 +1113,15 @@ void MainWindow::StartGame(const std::vector<std::string>& paths,
 
 void MainWindow::StartGame(std::unique_ptr<BootParameters>&& parameters)
 {
+  // [dmcp]
+  // If this is called from a non-GUI thread, schedule it to run on the GUI thread instead
+  if (QThread::currentThread() != QApplication::instance()->thread()) {
+    NOTICE_LOG_FMT(CORE, "IPC: Need to schedule");
+    QMetaObject::invokeMethod(this, "StartGame", Qt::BlockingQueuedConnection, 
+                             Q_ARG(std::unique_ptr<BootParameters>, std::move(parameters)));
+    return;
+  }
+
   if (parameters && std::holds_alternative<BootParameters::Disc>(parameters->parameters))
   {
     if (std::get<BootParameters::Disc>(parameters->parameters).volume->IsNKit())
@@ -1138,7 +1147,7 @@ void MainWindow::StartGame(std::unique_ptr<BootParameters>&& parameters)
 
   // Boot up, show an error if it fails to load the game.
   if (!BootManager::BootCore(m_system, std::move(parameters),
-                             ::GetWindowSystemInfo(m_render_widget->windowHandle())))
+                            ::GetWindowSystemInfo(m_render_widget->windowHandle())))
   {
     ModalMessageBox::critical(this, tr("Error"), tr("Failed to init core"), QMessageBox::Ok);
     HideRenderWidget();
@@ -1184,6 +1193,13 @@ void MainWindow::SetFullScreenResolution(bool fullscreen)
 
 void MainWindow::ShowRenderWidget()
 {
+  // [dmcp]
+  // If this is called from a non-GUI thread, schedule it to run on the GUI thread instead
+  if (QThread::currentThread() != QApplication::instance()->thread()) {
+    QMetaObject::invokeMethod(this, "ShowRenderWidget", Qt::BlockingQueuedConnection);
+    return;
+  }
+
   SetFullScreenResolution(false);
   Host::GetInstance()->SetRenderFullscreen(false);
 
@@ -2044,4 +2060,16 @@ void MainWindow::ShowRiivolutionBootWidget(const UICommon::GameFile& game)
 
   AddRiivolutionPatches(boot_params.get(), std::move(w.GetPatches()));
   StartGame(std::move(boot_params));
+}
+
+void MainWindow::StartGameOnMainThread(const std::string& path)
+{
+  NOTICE_LOG_FMT(CORE, "IPC: Running StartGameOnMainThread");
+  StartGame(path, ScanForSecondDisc::Yes);
+}
+
+void MainWindow::ShowRenderWidgetOnMainThread()
+{
+  NOTICE_LOG_FMT(CORE, "IPC: Running ShowRenderWidgetOnMainThread");
+  ShowRenderWidget();
 }

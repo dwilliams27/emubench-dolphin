@@ -27,6 +27,9 @@ endif()
 set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15.0" CACHE STRING "")
 
 set(CMAKE_USER_MAKE_RULES_OVERRIDE "${CMAKE_CURRENT_SOURCE_DIR}/CMake/FlagsOverride.cmake")
+# [dmcp] DEBUG
+# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fno-omit-frame-pointer -g")
+# set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address")
 
 project(dolphin-emu)
 
@@ -314,7 +317,9 @@ else()
 
   # gcc uses some optimizations which might break stuff without this flag
   check_and_add_flag(NO_STRICT_ALIASING -fno-strict-aliasing)
-  check_and_add_flag(NO_EXCEPTIONS -fno-exceptions)
+  
+  # [dmcp]
+  # check_and_add_flag(NO_EXCEPTIONS -fno-exceptions)
 
   check_and_add_flag(VISIBILITY_INLINES_HIDDEN -fvisibility-inlines-hidden)
   check_and_add_flag(VISIBILITY_HIDDEN -fvisibility=hidden)
@@ -362,7 +367,9 @@ if(CMAKE_SYSTEM_NAME MATCHES "Darwin")
   # Set FMT_EXCEPTIONS = 0, for consistency with -fno-exceptions earlier.
   # If we set only -fno-exceptions, fmt fails to compile when included from
   # Objective-C++ because fmt tries try to use throw because __EXCEPTIONS is defined.
-  add_definitions(-DFMT_EXCEPTIONS=0)
+
+  # [dmcp]
+  # add_definitions(-DFMT_EXCEPTIONS=0)
 
   find_library(APPKIT_LIBRARY AppKit)
   find_library(APPSERV_LIBRARY ApplicationServices)
@@ -719,12 +726,13 @@ dolphin_find_optional_system_library(MBEDTLS Externals/mbedtls 2.28)
 
 dolphin_find_optional_system_library(CURL Externals/curl)
 
-if(NOT ANDROID)
-  dolphin_find_optional_system_library(Iconv Externals/libiconv-1.14)
-else()
-  message(STATUS "Using static iconv from Externals")
-  add_subdirectory(Externals/libiconv-1.14 EXCLUDE_FROM_ALL)
-endif()
+# [dmcp] No clue why this was needed
+# if(NOT ANDROID)
+#   dolphin_find_optional_system_library(Iconv Externals/libiconv-1.14)
+# else()
+message(STATUS "Using static iconv from Externals")
+add_subdirectory(Externals/libiconv-1.14 EXCLUDE_FROM_ALL)
+# endif()
 
 if(NOT ANDROID)
   dolphin_find_optional_system_library(HIDAPI Externals/hidapi)
@@ -767,6 +775,11 @@ add_subdirectory(Externals/FatFs)
 if (USE_RETRO_ACHIEVEMENTS)
 	add_subdirectory(Externals/rcheevos)
 endif()
+
+########################################
+# [dmcp]
+add_subdirectory(Externals/cpp-httplib)
+add_subdirectory(Externals/json)
 
 ########################################
 # Pre-build events: Define configuration variables and write SCM info header

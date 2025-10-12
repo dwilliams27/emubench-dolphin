@@ -32,10 +32,17 @@ public:
 
   void SaveScreenshot(std::string filename);
 
+  // [dmcp]
+  void SaveScreenshotWithCallback(std::string filename, Common::Event* completion_event);
+
   bool IsFrameDumping() const;
   int GetRequiredResolutionLeastCommonMultiple() const;
 
   void DoState(PointerWrap& p);
+
+  // [dmcp]
+  // Used to kick frame dump thread.
+  Common::Event m_frame_dump_start;
 
 private:
   // NOTE: The methods below are called on the framedumping thread.
@@ -63,9 +70,6 @@ private:
 
   std::thread m_frame_dump_thread;
   Common::Flag m_frame_dump_thread_running;
-
-  // Used to kick frame dump thread.
-  Common::Event m_frame_dump_start;
 
   // Set by frame dump thread on frame completion.
   Common::Event m_frame_dump_done;
@@ -100,6 +104,9 @@ private:
   std::string m_screenshot_name;
 
   Common::EventHook m_frame_end_handle;
+  
+  // [dmcp]
+  Common::Event* m_external_screenshot_completed = nullptr;
 };
 
 extern std::unique_ptr<FrameDumper> g_frame_dumper;

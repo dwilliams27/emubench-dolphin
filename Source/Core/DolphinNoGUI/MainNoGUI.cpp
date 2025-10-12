@@ -36,6 +36,9 @@
 
 #include "VideoCommon/VideoBackendBase.h"
 
+// [dmcp]
+#include "IPC/HTTPServer.h"
+
 static std::unique_ptr<Platform> s_platform;
 
 static void signal_handler(int)
@@ -321,6 +324,15 @@ int main(int argc, char* argv[])
 #endif
 
   DolphinAnalytics::Instance().ReportDolphinStart("nogui");
+
+  // [dmcp]
+  if (!IPC::HTTPServer::GetInstance().Start(8080)) {
+    ERROR_LOG_FMT(CORE, "Failed to start IPC server");
+  } else {
+    fprintf(stdout, "IPC server initialized on port 8080");
+    fflush(stdout);
+    INFO_LOG_FMT(CORE, "IPC server initialized on port 8080");
+  }
 
   if (!BootManager::BootCore(Core::System::GetInstance(), std::move(boot), wsi))
   {

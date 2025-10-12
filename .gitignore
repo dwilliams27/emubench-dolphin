@@ -43,3 +43,6 @@ CMakeLists.txt.user
 /.vscode/
 # Ignore flatpak-builder's cache dir
 .flatpak-builder
+
+.env
+builder-key.json

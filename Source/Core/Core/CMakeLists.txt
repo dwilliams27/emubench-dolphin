@@ -643,6 +643,8 @@ PUBLIC
   videonull
   videoogl
   videosoftware
+  # [dmcp]
+  dolphin-ipc
 
 PRIVATE
   FatFs
@@ -650,6 +652,8 @@ PRIVATE
   LZO::LZO
   LZ4::LZ4
   ZLIB::ZLIB
+  # [dmcp]
+  nlohmann_json
 )
 
 if (APPLE)

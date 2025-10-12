@@ -38,8 +38,12 @@ class FileLogListener : public LogListener
 public:
   FileLogListener(const std::string& filename)
   {
+    // [dmcp] Why
+    File::CreateFullPath(filename);
     File::OpenFStream(m_logfile, filename, std::ios::app);
     SetEnable(true);
+    m_last_flush_time = std::chrono::steady_clock::now();
+    m_filename = filename;
   }
 
   void Log(LogLevel, const char* msg) override
@@ -48,6 +52,16 @@ public:
       return;
 
     std::lock_guard<std::mutex> lk(m_log_lock);
+    // [dmcp]
+    auto now = std::chrono::steady_clock::now();
+    
+    // Close and open file to ensure its pushed up to bucket frequently
+    if ((now - m_last_flush_time) >= std::chrono::seconds(5))
+    {
+      m_logfile.close();
+      File::OpenFStream(m_logfile, m_filename, std::ios::app);
+      m_last_flush_time = now;
+    }
     m_logfile << msg << std::flush;
   }
 
@@ -59,6 +73,8 @@ private:
   std::mutex m_log_lock;
   std::ofstream m_logfile;
   bool m_enable;
+  std::string m_filename;
+  std::chrono::steady_clock::time_point m_last_flush_time;
 };
 
 void GenericLogFmtImpl(LogLevel level, LogType type, const char* file, int line,
@@ -132,6 +148,8 @@ LogManager::LogManager()
   m_log[LogType::IOS_WC24] = {"IOS_WC24", "IOS - WiiConnect24"};
   m_log[LogType::IOS_WFS] = {"IOS_WFS", "IOS - WFS"};
   m_log[LogType::IOS_WIIMOTE] = {"IOS_WIIMOTE", "IOS - Wii Remote"};
+  // [dmcp]
+  m_log[LogType::IPC] = {"IPC", "[dmcp] Inter-Process Communication"};
   m_log[LogType::MASTER_LOG] = {"MASTER", "Master Log"};
   m_log[LogType::MEMCARD_MANAGER] = {"MemCard Manager", "Memory Card Manager"};
   m_log[LogType::MEMMAP] = {"MI", "Memory Interface & Memory Map"};
@@ -158,8 +176,9 @@ LogManager::LogManager()
   LogLevel verbosity = Config::Get(LOGGER_VERBOSITY);
 
   SetLogLevel(verbosity);
-  EnableListener(LogListener::FILE_LISTENER, Config::Get(LOGGER_WRITE_TO_FILE));
-  EnableListener(LogListener::CONSOLE_LISTENER, Config::Get(LOGGER_WRITE_TO_CONSOLE));
+  // [dmcp] Always enable file and console listeners
+  EnableListener(LogListener::FILE_LISTENER, true);
+  EnableListener(LogListener::CONSOLE_LISTENER, true);
   EnableListener(LogListener::LOG_WINDOW_LISTENER, Config::Get(LOGGER_WRITE_TO_WINDOW));
 
   for (auto& container : m_log)
@@ -167,6 +186,10 @@ LogManager::LogManager()
     container.m_enable = Config::Get(
         Config::Info<bool>{{Config::System::Logger, "Logs", container.m_short_name}, false});
   }
+
+  // [dmcp] Always turn on Core and IPC
+  SetEnable(LogType::CORE, true);
+  SetEnable(LogType::IPC, true);
 
   m_path_cutoff_point = DeterminePathCutOffPoint();
 }

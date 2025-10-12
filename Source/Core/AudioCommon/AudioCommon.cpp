@@ -28,21 +28,8 @@ constexpr int AUDIO_VOLUME_MAX = 100;
 
 static std::unique_ptr<SoundStream> CreateSoundStreamForBackend(std::string_view backend)
 {
-  if (backend == BACKEND_CUBEB && CubebStream::IsValid())
-    return std::make_unique<CubebStream>();
-  else if (backend == BACKEND_OPENAL && OpenALStream::IsValid())
-    return std::make_unique<OpenALStream>();
-  else if (backend == BACKEND_NULLSOUND)
-    return std::make_unique<NullSound>();
-  else if (backend == BACKEND_ALSA && AlsaSound::IsValid())
-    return std::make_unique<AlsaSound>();
-  else if (backend == BACKEND_PULSEAUDIO && PulseAudio::IsValid())
-    return std::make_unique<PulseAudio>();
-  else if (backend == BACKEND_OPENSLES && OpenSLESStream::IsValid())
-    return std::make_unique<OpenSLESStream>();
-  else if (backend == BACKEND_WASAPI && WASAPIStream::IsValid())
-    return std::make_unique<WASAPIStream>();
-  return {};
+  // [dmcp]
+  return std::make_unique<NullSound>();
 }
 
 void InitSoundStream(Core::System& system)
