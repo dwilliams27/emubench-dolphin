@@ -96,15 +96,14 @@ public:
   }
   
   bool writeDocument(const std::string& collection, const std::string& testId,
-                     const std::string& subCollection, const std::string& docId, 
                      const std::string& jsonData) {
-    NOTICE_LOG_FMT(CORE, "IPC: Writing document to Firestore");
+    NOTICE_LOG_FMT(CORE, "IPC: Writing document to Firestore emulatorState field");
     CURL* curl = curl_easy_init();
     
     if(curl) {
       std::string url = "https://firestore.googleapis.com/v1/projects/" + 
                         projectId + "/databases/(default)/documents/" + 
-                        collection + "/" + testId + "/" + subCollection + "/" + docId;
+                        collection + "/" + testId + "?updateMask.fieldPaths=emulatorState";
       NOTICE_LOG_FMT(CORE, "IPC: Firestore URL: {}", url);
       
       curl_easy_setopt(curl, CURLOPT_URL, url.c_str());

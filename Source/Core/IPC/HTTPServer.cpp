@@ -407,14 +407,13 @@ void HTTPServer::WaitXFrames(uint32_t frames) {
 
 void HTTPServer::SetupTest() {
 	const char* testId = std::getenv("TEST_ID");
-	nlohmann::json emulatorState = {
-		{"id", "estate-1"},
+	nlohmann::json emulatorStateData = {
     {"status", "booting"},
     {"contextMemWatchValues", m_initial_context_watches},
     {"endStateMemWatchValues", m_initial_end_state_watches}
 	};
-	// TODO: Get id gen into C++land
-	m_firestore_client->writeDocument("SESSIONS", testId, "EMULATOR_STATE", "estate-1", m_firestore_client->createFirestorePayload(emulatorState));
+	nlohmann::json documentUpdate = {{"emulatorState", emulatorStateData}};
+	m_firestore_client->writeDocument("TESTS", testId, m_firestore_client->createFirestorePayload(documentUpdate));
 
 	File::CreateDir(File::GetUserPath(D_USER_IDX) + "ScreenShots");
 	IPC::MemWatcher::GetInstance().GetFramesStartedFuture().wait();
@@ -457,13 +456,13 @@ void HTTPServer::SetupTest() {
 	const char* mode = std::getenv("MODE");
 	m_real_time = mode && std::string(mode) == "real-time";
 
-	nlohmann::json readyEmulatorState = {
-		{"id", "estate-1"},
+	nlohmann::json readyEmulatorStateData = {
     {"status", "emulator-ready"},
     {"contextMemWatchValues", m_initial_context_watches},
     {"endStateMemWatchValues", m_initial_end_state_watches}
 	};
-	m_firestore_client->writeDocument("SESSIONS", testId, "EMULATOR_STATE", "estate-1", m_firestore_client->createFirestorePayload(readyEmulatorState));
+	nlohmann::json lastDocumentUpdate = {{"emulatorState", readyEmulatorStateData}};
+	m_firestore_client->writeDocument("TESTS", testId, m_firestore_client->createFirestorePayload(lastDocumentUpdate));
 }
 
 std::string HTTPServer::SaveNextScreenshot() {

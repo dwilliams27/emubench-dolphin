@@ -71,8 +71,9 @@ bool AXUCode::LoadResamplingCoefficients(bool require_same_checksum, u32 desired
 
     File::IOFile fp(filename, "rb");
     std::array<u8, raw_coeffs_size> raw_coeffs;
-    if (!fp.ReadBytes(raw_coeffs.data(), raw_coeffs_size))
-      continue;
+    // if (!fp.ReadBytes(raw_coeffs.data(), raw_coeffs_size))
+    //   continue;
+    fp.ReadBytes(raw_coeffs.data(), raw_coeffs_size);
 
     u32 checksum = Common::HashAdler32(raw_coeffs.data(), raw_coeffs_size);
     if (require_same_checksum && checksum != desired_checksum)
@@ -836,16 +837,22 @@ void AXUCode::DoAXState(PointerWrap& p)
   {
     if (!LoadResamplingCoefficients(true, *m_coeffs_checksum))
     {
-      // BYPASS: Try loading without checksum requirement
-      if (LoadResamplingCoefficients(false, 0))
-      {
-        NOTICE_LOG_FMT(CORE, "IPC: WARNING: Loaded savestate with different DSP coefficients");
-      }
-      else
-      {
-        NOTICE_LOG_FMT(CORE, "IPC: WARNING: Loaded savestate without DSP coefficients - audio may be affected");
-      }
-      // Allow the load to continue instead of setting verify mode
+      Core::DisplayMessage("Could not find the DSP polyphase resampling coefficients used by the "
+                      "savestate. Aborting load state.",
+                      3000);
+      p.SetVerifyMode();
+      return;
+
+      // // BYPASS: Try loading without checksum requirement
+      // if (LoadResamplingCoefficients(false, 0))
+      // {
+      //   NOTICE_LOG_FMT(CORE, "IPC: WARNING: Loaded savestate with different DSP coefficients");
+      // }
+      // else
+      // {
+      //   NOTICE_LOG_FMT(CORE, "IPC: WARNING: Loaded savestate without DSP coefficients - audio may be affected");
+      // }
+      // // Allow the load to continue instead of setting verify mode
     }
   }
 
