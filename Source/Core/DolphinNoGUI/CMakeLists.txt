@@ -25,6 +25,14 @@ endif()
 
 set_target_properties(dolphin-nogui PROPERTIES OUTPUT_NAME dolphin-emu-nogui)
 
+# [dmcp]
+# Copy Sys directory for post-processing shaders and other resources
+# The nogui binary looks for Sys at <binary-dir>/Contents/Resources/Sys/
+add_custom_command(TARGET dolphin-nogui POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Contents/Resources"
+  COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_SOURCE_DIR}/Data/Sys" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Contents/Resources/Sys"
+)
+
 target_link_libraries(dolphin-nogui
 PRIVATE
   core
