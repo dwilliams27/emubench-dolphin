@@ -137,7 +137,19 @@ void VideoConfig::Refresh()
   texture_filtering_mode = Config::Get(Config::GFX_ENHANCE_FORCE_TEXTURE_FILTERING);
   iMaxAnisotropy = Config::Get(Config::GFX_ENHANCE_MAX_ANISOTROPY);
   output_resampling_mode = Config::Get(Config::GFX_ENHANCE_OUTPUT_RESAMPLING);
-  sPostProcessingShader = Config::Get(Config::GFX_ENHANCE_POST_SHADER);
+  
+  // [dmcp]
+  // Check for USE_SHADER environment variable first, fall back to config
+  const char* env_shader = std::getenv("USE_SHADER");
+  if (env_shader && env_shader[0] != '\0')
+  {
+    sPostProcessingShader = env_shader;
+  }
+  else
+  {
+    sPostProcessingShader = Config::Get(Config::GFX_ENHANCE_POST_SHADER);
+  }
+  
   bForceTrueColor = Config::Get(Config::GFX_ENHANCE_FORCE_TRUE_COLOR);
   bDisableCopyFilter = Config::Get(Config::GFX_ENHANCE_DISABLE_COPY_FILTER);
   bArbitraryMipmapDetection = Config::Get(Config::GFX_ENHANCE_ARBITRARY_MIPMAP_DETECTION);
