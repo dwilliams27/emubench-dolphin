@@ -32,5 +32,8 @@ fi
 
 echo "Running game: $GAME_FILE"
 
+TIMEOUT_MINUTES=30
+echo "Container will auto-terminate after $TIMEOUT_MINUTES minutes"
+
 Xvfb :99 -screen 0 1280x720x24 & export DISPLAY=:99
-exec /app/dolphin-emu-nogui -e $GAME_FILE --save_state $SAVE_STATE_FILE --config Logger.Options.WriteToFile=true "$@"
+exec timeout ${TIMEOUT_MINUTES}m /app/dolphin-emu-nogui -e $GAME_FILE --save_state $SAVE_STATE_FILE --config Logger.Options.WriteToFile=true "$@"
