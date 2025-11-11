@@ -282,9 +282,46 @@ void Presenter::ProcessFrameDumping(u64 ticks) const
     target_rect.right = width;
     target_rect.bottom = height;
 
-    // TODO: any scaling done by this won't be gamma corrected,
-    // we should either apply post processing as well, or port its gamma correction code
-    g_frame_dumper->DumpCurrentFrame(m_xfb_entry->texture.get(), m_xfb_rect, target_rect, ticks,
+    // [dmcp] Create or verify screenshot texture/framebuffer for post-processing
+    // This ensures screenshots capture the output with shaders applied
+    if (!m_screenshot_texture || m_screenshot_texture->GetWidth() != static_cast<u32>(width) ||
+        m_screenshot_texture->GetHeight() != static_cast<u32>(height))
+    {
+      // Recreate texture to match target dimensions
+      m_screenshot_framebuffer.reset();
+      m_screenshot_texture.reset();
+      m_screenshot_texture = g_gfx->CreateTexture(
+          TextureConfig(width, height, 1, 1, 1, AbstractTextureFormat::RGBA8,
+                        AbstractTextureFlag_RenderTarget, AbstractTextureType::Texture_2DArray),
+          "Screenshot texture with post-processing");
+      if (!m_screenshot_texture)
+      {
+        WARN_LOG_FMT(VIDEO, "Failed to create screenshot texture");
+        return;
+      }
+      m_screenshot_framebuffer =
+          g_gfx->CreateFramebuffer(m_screenshot_texture.get(), nullptr);
+      if (!m_screenshot_framebuffer)
+      {
+        WARN_LOG_FMT(VIDEO, "Failed to create screenshot framebuffer");
+        return;
+      }
+    }
+
+    // [dmcp] Apply post-processing to screenshot texture
+    // Save current framebuffer, render XFB with post-processing to our screenshot texture,
+    // then restore the previous framebuffer
+    AbstractFramebuffer* const previous_framebuffer = g_gfx->GetCurrentFramebuffer();
+    g_gfx->SetFramebuffer(m_screenshot_framebuffer.get());
+    g_gfx->SetViewportAndScissor(target_rect);
+
+    // Render the XFB texture with post-processing applied
+    m_post_processor->BlitFromTexture(target_rect, m_xfb_rect, m_xfb_entry->texture.get());
+
+    g_gfx->SetFramebuffer(previous_framebuffer);
+
+    // [dmcp] Now dump from the post-processed screenshot texture instead of raw XFB
+    g_frame_dumper->DumpCurrentFrame(m_screenshot_texture.get(), target_rect, target_rect, ticks,
                                      m_frame_count);
   }
 }

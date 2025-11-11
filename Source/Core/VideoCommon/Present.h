@@ -154,6 +154,10 @@ private:
   std::unique_ptr<VideoCommon::PostProcessing> m_post_processor;
   std::unique_ptr<VideoCommon::OnScreenUI> m_onscreen_ui;
 
+  // [dmcp] Texture and framebuffer for capturing screenshots with post-processing applied
+  mutable std::unique_ptr<AbstractTexture> m_screenshot_texture;
+  mutable std::unique_ptr<AbstractFramebuffer> m_screenshot_framebuffer;
+
   u64 m_frame_count = 0;
   u64 m_present_count = 0;
 
