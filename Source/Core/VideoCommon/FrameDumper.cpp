@@ -3,6 +3,8 @@
 
 #include "VideoCommon/FrameDumper.h"
 
+#include <cstring>
+
 #include "Common/Assert.h"
 #include "Common/FileUtil.h"
 #include "Common/Image.h"
@@ -16,6 +18,7 @@
 #include "VideoCommon/AbstractTexture.h"
 #include "VideoCommon/OnScreenDisplay.h"
 #include "VideoCommon/Present.h"
+#include "VideoCommon/VideoConfig.h"
 
 // The video encoder needs the image to be a multiple of x samples.
 static constexpr int VIDEO_ENCODER_LCM = 4;
@@ -130,8 +133,35 @@ void FrameDumper::FlushFrameDump()
   output->Flush();
   if (output->Map())
   {
-    DumpFrameData(reinterpret_cast<u8*>(output->GetMappedPointer()), output->GetConfig().width,
-                  output->GetConfig().height, static_cast<int>(output->GetMappedStride()));
+    u8* data = reinterpret_cast<u8*>(output->GetMappedPointer());
+    const u32 width = output->GetConfig().width;
+    const u32 height = output->GetConfig().height;
+    const int stride = static_cast<int>(output->GetMappedStride());
+
+    // [dmcp] For OpenGL (lower-left origin), flip pixel rows vertically
+    // OpenGL stores framebuffers bottom-up, but PNGs expect top-down data
+    if (g_backend_info.bUsesLowerLeftOrigin)
+    {
+      // Allocate buffer if needed
+      const size_t row_size = stride;
+      const size_t buffer_size = row_size * height;
+      if (m_flipped_frame_buffer.size() < buffer_size)
+        m_flipped_frame_buffer.resize(buffer_size);
+
+      // Flip rows: copy from bottom to top
+      for (u32 y = 0; y < height; ++y)
+      {
+        const u8* src_row = data + (height - 1 - y) * stride;
+        u8* dst_row = m_flipped_frame_buffer.data() + y * stride;
+        std::memcpy(dst_row, src_row, row_size);
+      }
+
+      DumpFrameData(m_flipped_frame_buffer.data(), width, height, stride);
+    }
+    else
+    {
+      DumpFrameData(data, width, height, stride);
+    }
   }
   else
   {

@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include <vector>
+
 #include "Common/CommonTypes.h"
 #include "Common/Event.h"
 #include "Common/Flag.h"
@@ -104,9 +106,12 @@ private:
   std::string m_screenshot_name;
 
   Common::EventHook m_frame_end_handle;
-  
+
   // [dmcp]
   Common::Event* m_external_screenshot_completed = nullptr;
+
+  // [dmcp] Buffer for flipping pixel rows in OpenGL (lower-left origin backends)
+  std::vector<u8> m_flipped_frame_buffer;
 };
 
 extern std::unique_ptr<FrameDumper> g_frame_dumper;

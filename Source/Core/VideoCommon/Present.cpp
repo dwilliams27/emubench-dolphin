@@ -321,6 +321,7 @@ void Presenter::ProcessFrameDumping(u64 ticks) const
     g_gfx->SetFramebuffer(previous_framebuffer);
 
     // [dmcp] Now dump from the post-processed screenshot texture instead of raw XFB
+    // Pass flag to indicate if we need to flip rows for OpenGL
     g_frame_dumper->DumpCurrentFrame(m_screenshot_texture.get(), target_rect, target_rect, ticks,
                                      m_frame_count);
   }

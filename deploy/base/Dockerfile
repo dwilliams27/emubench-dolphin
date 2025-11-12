@@ -97,6 +97,7 @@ RUN mkdir -p /root/.dolphin-emu/Config \
 COPY --from=builder /dolphin-src/build/Binaries/dolphin-emu /app/dolphin-emu
 COPY --from=builder /dolphin-src/build/Binaries/dolphin-emu-nogui /app/dolphin-emu-nogui
 COPY --from=builder /dolphin-src/Data/Sys /app/Sys
+COPY --from=builder /dolphin-src/Data/Sys/Shaders /app/emu/Shaders
 
 COPY deploy/configs/Dolphin.ini /root/.dolphin-emu/Config/Dolphin.ini
 COPY deploy/base/entrypoint.sh /app/entrypoint.sh
