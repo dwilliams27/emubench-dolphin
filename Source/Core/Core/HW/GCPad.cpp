@@ -149,6 +149,57 @@ bool IsInitialized()
   return !s_config.ControllersNeedToBeCreated();
 }
 
+// Helper function to merge IPC and standard controller inputs
+static GCPadStatus MergeInputs(const GCPadStatus& ipc_status, const GCPadStatus& standard_status)
+{
+  GCPadStatus merged = ipc_status;
+
+  // Merge buttons: OR them together (either source can press a button)
+  merged.button |= standard_status.button;
+
+  // Helper lambda to calculate distance from center for stick values
+  auto distance_from_center = [](uint8_t x, uint8_t y, uint8_t center) -> int {
+    int dx = static_cast<int>(x) - center;
+    int dy = static_cast<int>(y) - center;
+    return dx * dx + dy * dy;  // Squared distance (avoids sqrt for performance)
+  };
+
+  // Merge main stick: use whichever input is further from center
+  int ipc_stick_dist = distance_from_center(ipc_status.stickX, ipc_status.stickY,
+                                            GCPadStatus::MAIN_STICK_CENTER_X);
+  int std_stick_dist = distance_from_center(standard_status.stickX, standard_status.stickY,
+                                            GCPadStatus::MAIN_STICK_CENTER_X);
+  if (std_stick_dist > ipc_stick_dist)
+  {
+    merged.stickX = standard_status.stickX;
+    merged.stickY = standard_status.stickY;
+  }
+
+  // Merge C-stick: use whichever input is further from center
+  int ipc_cstick_dist = distance_from_center(ipc_status.substickX, ipc_status.substickY,
+                                             GCPadStatus::C_STICK_CENTER_X);
+  int std_cstick_dist = distance_from_center(standard_status.substickX, standard_status.substickY,
+                                             GCPadStatus::C_STICK_CENTER_X);
+  if (std_cstick_dist > ipc_cstick_dist)
+  {
+    merged.substickX = standard_status.substickX;
+    merged.substickY = standard_status.substickY;
+  }
+
+  // Merge triggers: take max value
+  merged.triggerLeft = std::max(ipc_status.triggerLeft, standard_status.triggerLeft);
+  merged.triggerRight = std::max(ipc_status.triggerRight, standard_status.triggerRight);
+
+  // Merge analog button values: take max value
+  merged.analogA = std::max(ipc_status.analogA, standard_status.analogA);
+  merged.analogB = std::max(ipc_status.analogB, standard_status.analogB);
+
+  // Merge connection status: connected if either is connected
+  merged.isConnected = ipc_status.isConnected || standard_status.isConnected;
+
+  return merged;
+}
+
 GCPadStatus GetStatus(int pad_num)
 {
   // [dmcp] DEBUG
@@ -183,7 +234,9 @@ GCPadStatus GetStatus(int pad_num)
     // (Timed press overrides persistent release for the duration)
     current_status.button |= combined_timed_buttons;
 
-    return current_status;
+    // Get standard input and merge with IPC input
+    GCPadStatus standard_status = static_cast<GCPad*>(s_config.GetController(pad_num))->GetInput();
+    return MergeInputs(current_status, standard_status);
   }
   else
   {
