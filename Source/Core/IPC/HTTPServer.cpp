@@ -376,6 +376,12 @@ std::map<std::string, std::string> HTTPServer::ReadMemWatches(std::vector<std::s
 
 void HTTPServer::AdvanceFrame() {
 	HTTPServer::m_frame_count++;
+
+	// Advance frame counters for timed IPC inputs - must be synchronized with HTTPServer frame counter
+	for (int i = 0; i < 4; ++i) {
+		Pad::AdvanceFrame(i);
+	}
+
 	if (HTTPServer::m_waiting && HTTPServer::m_frame_count >= HTTPServer::m_frame_event) {
 		HTTPServer::m_waiting = false;
 		HTTPServer::m_wait_frames_promise.set_value();
@@ -401,7 +407,6 @@ void HTTPServer::WaitXFrames(uint32_t frames) {
 		HTTPServer::m_waiting = false;
 		return;
 	}
-	
 	wait_frames_future.wait();
 }
 

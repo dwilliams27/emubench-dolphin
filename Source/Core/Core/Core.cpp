@@ -891,11 +891,6 @@ void Callback_FramePresented(const PresentInfo& present_info)
 // Called from VideoInterface::Update (CPU thread) at emulated field boundaries
 void Callback_NewField(Core::System& system)
 {
-  // [dmcp] Advance frame counters for timed IPC inputs
-  for (int i = 0; i < 4; ++i) {
-    Pad::AdvanceFrame(i);
-  }
-
   if (s_frame_step)
   {
     // To ensure that s_stop_frame_step is up to date, wait for the GPU thread queue to empty,

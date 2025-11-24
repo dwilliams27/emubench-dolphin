@@ -236,7 +236,9 @@ GCPadStatus GetStatus(int pad_num)
 
     // Get standard input and merge with IPC input
     GCPadStatus standard_status = static_cast<GCPad*>(s_config.GetController(pad_num))->GetInput();
-    return MergeInputs(current_status, standard_status);
+    GCPadStatus merged = MergeInputs(current_status, standard_status);
+
+    return merged;
   }
   else
   {
