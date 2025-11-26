@@ -318,6 +318,9 @@ void Presenter::ProcessFrameDumping(u64 ticks) const
     // Render the XFB texture with post-processing applied
     m_post_processor->BlitFromTexture(target_rect, m_xfb_rect, m_xfb_entry->texture.get());
 
+    // [dmcp] Ensure GPU completes rendering before we copy the texture
+    g_gfx->Flush();
+
     g_gfx->SetFramebuffer(previous_framebuffer);
 
     // [dmcp] Now dump from the post-processed screenshot texture instead of raw XFB
