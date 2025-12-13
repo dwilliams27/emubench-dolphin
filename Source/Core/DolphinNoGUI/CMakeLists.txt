@@ -25,7 +25,7 @@ endif()
 
 set_target_properties(dolphin-nogui PROPERTIES OUTPUT_NAME dolphin-emu-nogui)
 
-# [dmcp]
+# [emubench]
 # Copy Sys directory for post-processing shaders and other resources
 # The nogui binary looks for Sys at <binary-dir>/Contents/Resources/Sys/
 add_custom_command(TARGET dolphin-nogui POST_BUILD
@@ -38,7 +38,7 @@ PRIVATE
   core
   uicommon
   cpp-optparse
-  # [dmcp]
+  # [emubench]
   nlohmann_json
 )
 

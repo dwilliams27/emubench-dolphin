@@ -643,7 +643,7 @@ PUBLIC
   videonull
   videoogl
   videosoftware
-  # [dmcp]
+  # [emubench]
   dolphin-ipc
 
 PRIVATE
@@ -652,7 +652,7 @@ PRIVATE
   LZO::LZO
   LZ4::LZ4
   ZLIB::ZLIB
-  # [dmcp]
+  # [emubench]
   nlohmann_json
 )
 

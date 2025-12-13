@@ -1113,7 +1113,7 @@ void MainWindow::StartGame(const std::vector<std::string>& paths,
 
 void MainWindow::StartGame(std::unique_ptr<BootParameters>&& parameters)
 {
-  // [dmcp]
+  // [emubench]
   // If this is called from a non-GUI thread, schedule it to run on the GUI thread instead
   if (QThread::currentThread() != QApplication::instance()->thread()) {
     NOTICE_LOG_FMT(CORE, "IPC: Need to schedule");
@@ -1193,7 +1193,7 @@ void MainWindow::SetFullScreenResolution(bool fullscreen)
 
 void MainWindow::ShowRenderWidget()
 {
-  // [dmcp]
+  // [emubench]
   // If this is called from a non-GUI thread, schedule it to run on the GUI thread instead
   if (QThread::currentThread() != QApplication::instance()->thread()) {
     QMetaObject::invokeMethod(this, "ShowRenderWidget", Qt::BlockingQueuedConnection);

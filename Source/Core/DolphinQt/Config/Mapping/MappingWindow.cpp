@@ -437,7 +437,7 @@ void MappingWindow::SetMappingType(MappingWindow::Type type)
   case Type::MAPPING_GC_BONGOS:
   case Type::MAPPING_GC_STEERINGWHEEL:
   case Type::MAPPING_GC_DANCEMAT:
-  // [dmcp]
+  // [emubench]
   case Type::MAPPING_GC_IPC:
   case Type::MAPPING_GCPAD:
     widget = new GCPadEmu(this);

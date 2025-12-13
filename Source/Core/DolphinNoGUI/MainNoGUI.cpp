@@ -36,7 +36,7 @@
 
 #include "VideoCommon/VideoBackendBase.h"
 
-// [dmcp]
+// [emubench]
 #include "IPC/HTTPServer.h"
 
 static std::unique_ptr<Platform> s_platform;
@@ -325,7 +325,7 @@ int main(int argc, char* argv[])
 
   DolphinAnalytics::Instance().ReportDolphinStart("nogui");
 
-  // [dmcp]
+  // [emubench]
   if (!IPC::HTTPServer::GetInstance().Start(8080)) {
     ERROR_LOG_FMT(CORE, "Failed to start IPC server");
   } else {

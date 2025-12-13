@@ -27,7 +27,7 @@ endif()
 set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15.0" CACHE STRING "")
 
 set(CMAKE_USER_MAKE_RULES_OVERRIDE "${CMAKE_CURRENT_SOURCE_DIR}/CMake/FlagsOverride.cmake")
-# [dmcp] DEBUG
+# [emubench] DEBUG
 # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fno-omit-frame-pointer -g")
 # set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address")
 
@@ -318,7 +318,7 @@ else()
   # gcc uses some optimizations which might break stuff without this flag
   check_and_add_flag(NO_STRICT_ALIASING -fno-strict-aliasing)
   
-  # [dmcp]
+  # [emubench]
   # check_and_add_flag(NO_EXCEPTIONS -fno-exceptions)
 
   check_and_add_flag(VISIBILITY_INLINES_HIDDEN -fvisibility-inlines-hidden)
@@ -368,7 +368,7 @@ if(CMAKE_SYSTEM_NAME MATCHES "Darwin")
   # If we set only -fno-exceptions, fmt fails to compile when included from
   # Objective-C++ because fmt tries try to use throw because __EXCEPTIONS is defined.
 
-  # [dmcp]
+  # [emubench]
   # add_definitions(-DFMT_EXCEPTIONS=0)
 
   find_library(APPKIT_LIBRARY AppKit)
@@ -726,7 +726,7 @@ dolphin_find_optional_system_library(MBEDTLS Externals/mbedtls 2.28)
 
 dolphin_find_optional_system_library(CURL Externals/curl)
 
-# [dmcp] No clue why this was needed
+# [emubench] No clue why this was needed
 # if(NOT ANDROID)
 #   dolphin_find_optional_system_library(Iconv Externals/libiconv-1.14)
 # else()
@@ -777,7 +777,7 @@ if (USE_RETRO_ACHIEVEMENTS)
 endif()
 
 ########################################
-# [dmcp]
+# [emubench]
 add_subdirectory(Externals/cpp-httplib)
 add_subdirectory(Externals/json)
 

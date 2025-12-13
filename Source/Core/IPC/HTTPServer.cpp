@@ -114,25 +114,46 @@ void HTTPServer::ServerThread(int port) {
 
 		// Convert to GCPadStatus and update Dolphin
 		GCPadStatus status = ConvertToGCPadStatus(input);
-		if (json_data->contains("frames") && (*json_data)["frames"].is_number_unsigned()) {
-			uint32_t frame_count = (*json_data)["frames"].get<uint32_t>();
-			if (frame_count > 0) {
-        // Queue the input to be active for a specific number of frames
-        Pad::QueueTimedInput(port, status, frame_count);
-        NOTICE_LOG_FMT(CORE, "IPC: Queued timed input for pad {} for {} frames", port, frame_count);
-			} else {
-        res.status = 400;
-				res.set_content("{\"error\":\"Invalid frames parameter; must be >0\"}", "application/json");
-				return;
-			}
+		// Frames parameter is required and must be >= 5 for screenshot pipeline
+		constexpr uint32_t MINIMUM_FRAMES = 5;
+		constexpr uint32_t SCREENSHOT_PIPELINE_FRAMES = 2;
 
-			// Wait frame_count frames
-			HTTPServer::WaitXFrames(frame_count);
-		} else {
-      // No 'frames' parameter, apply as persistent state
-      Pad::UpdateControllerStateFromHTTP(port, status);
-      NOTICE_LOG_FMT(CORE, "IPC: Applying persistent update for pad {}", port);
+		if (!json_data->contains("frames") || !(*json_data)["frames"].is_number_unsigned()) {
+			res.status = 400;
+			res.set_content("{\"error\":\"Missing or invalid 'frames' parameter\"}", "application/json");
+			return;
 		}
+
+		uint32_t frame_count = (*json_data)["frames"].get<uint32_t>();
+		if (frame_count < MINIMUM_FRAMES) {
+			res.status = 400;
+			res.set_content("{\"error\":\"frames must be >= 5 for screenshot pipeline\"}", "application/json");
+			return;
+		}
+
+		// Queue the input to be active for the full duration
+		Pad::QueueTimedInput(port, status, frame_count);
+		NOTICE_LOG_FMT(CORE, "IPC: Queued timed input for pad {} for {} frames", port, frame_count);
+
+		// Wait until SCREENSHOT_PIPELINE_FRAMES before the end, then set up screenshot
+		uint32_t frames_before_screenshot = frame_count - SCREENSHOT_PIPELINE_FRAMES;
+		HTTPServer::WaitXFrames(frames_before_screenshot);
+
+		// Set up screenshot request while still running (don't kick thread directly)
+		std::string screenshot_name = std::to_string(m_screenshot_count++);
+		static thread_local Common::Event screenshot_completion_event;
+		screenshot_completion_event.Reset();
+		if (g_frame_dumper) {
+			g_frame_dumper->SaveScreenshotWithCallback(
+				File::GetUserPath(D_SCREENSHOTS_IDX) + screenshot_name + ".png",
+				&screenshot_completion_event
+			);
+			NOTICE_LOG_FMT(CORE, "IPC: Screenshot {} queued at frame {}, waiting {} more frames",
+				screenshot_name, m_frame_count, SCREENSHOT_PIPELINE_FRAMES);
+		}
+
+		// Wait remaining frames for screenshot capture + flush
+		HTTPServer::WaitXFrames(SCREENSHOT_PIPELINE_FRAMES);
 
 		// If turn-based, pause the game
 		if (!m_real_time) {
@@ -140,7 +161,11 @@ void HTTPServer::ServerThread(int port) {
 			Core::SetState(system, Core::State::Paused);
 		}
 
-		std::string screenshot_name = HTTPServer::SaveNextScreenshot();
+		// Wait for screenshot completion (should be nearly instant since pipeline already ran)
+		if (g_frame_dumper) {
+			screenshot_completion_event.Wait();
+			NOTICE_LOG_FMT(CORE, "IPC: Screenshot {} completed", screenshot_name);
+		}
 		HTTPServer::UploadScreenshotToGcp(screenshot_name);
 
 		std::map<std::string, std::string> endStateMemWatches = HTTPServer::ReadMemWatches(m_end_state_watch_names);
@@ -478,11 +503,30 @@ std::string HTTPServer::SaveNextScreenshot() {
 	completion_event.Reset();
 
 	if (g_frame_dumper) {
+		// Check if emulation is paused - if so, we need to briefly unpause
+		// to allow frame capture and flush to occur
+		Core::System& system = Core::System::GetInstance();
+		const bool was_paused = Core::GetState(system) == Core::State::Paused;
+
+		if (was_paused) {
+			Core::SetState(system, Core::State::Running);
+		}
+
+		// Set up the screenshot request
 		g_frame_dumper->SaveScreenshotWithCallback(
 			File::GetUserPath(D_SCREENSHOTS_IDX) + screenshot_name + ".png",
 			&completion_event
 		);
-		g_frame_dumper->m_frame_dump_start.Set();
+
+		// Wait for 2 frames to ensure:
+		// - Frame 1: ProcessFrameDumping() captures the current frame
+		// - Frame 2: FlushFrameDump() processes and kicks the dump thread
+		// Do NOT kick the thread directly - let the normal frame flow handle it
+		HTTPServer::WaitXFrames(2);
+
+		if (was_paused) {
+			Core::SetState(system, Core::State::Paused);
+		}
 	}
 
 	completion_event.Wait();

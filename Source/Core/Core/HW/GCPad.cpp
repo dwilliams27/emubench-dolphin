@@ -13,7 +13,7 @@
 #include "InputCommon/ControllerInterface/ControllerInterface.h"
 #include "InputCommon/GCPadStatus.h"
 #include "InputCommon/InputConfig.h"
-// [dmcp]
+// [emubench]
 #include "Common/Logging/Log.h"
 #include <vector>
 
@@ -21,7 +21,7 @@ namespace Pad
 {
 static InputConfig s_config("GCPadNew", _trans("Pad"), "GCPad", "Pad");
 
-// [dmcp]
+// [emubench]
 struct TimedInput
 {
   uint16_t button_mask;
@@ -202,9 +202,9 @@ static GCPadStatus MergeInputs(const GCPadStatus& ipc_status, const GCPadStatus&
 
 GCPadStatus GetStatus(int pad_num)
 {
-  // [dmcp] DEBUG
+  // [emubench] DEBUG
   // return static_cast<GCPad*>(s_config.GetController(pad_num))->GetInput();
-  // [dmcp]
+  // [emubench]
   if (pad_num < 0 || pad_num >= 4)
   {
     return {};

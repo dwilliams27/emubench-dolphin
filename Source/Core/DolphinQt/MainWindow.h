@@ -88,7 +88,7 @@ public:
   bool eventFilter(QObject* object, QEvent* event) override;
   QMenu* createPopupMenu() override;
 
-  // [dmcp]
+  // [emubench]
   enum class ScanForSecondDisc
   {
     Yes,

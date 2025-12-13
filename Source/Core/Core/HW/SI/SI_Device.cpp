@@ -139,7 +139,7 @@ bool SIDevice_IsGCController(SIDevices type)
   case SIDEVICE_GC_TARUKONGA:
   case SIDEVICE_DANCEMAT:
   case SIDEVICE_GC_STEERING:
-  // [dmcp]
+  // [emubench]
   case SIDEVICE_GC_IPC:
     return true;
   default:
@@ -168,7 +168,7 @@ std::unique_ptr<ISIDevice> SIDevice_Create(Core::System& system, const SIDevices
   case SIDEVICE_GC_TARUKONGA:
     return std::make_unique<CSIDevice_TaruKonga>(system, device, port_number);
 
-  // [dmcp]
+  // [emubench]
   case SIDEVICE_GC_IPC:
     return std::make_unique<CSIDevice_IPC>(system, device, port_number);
 

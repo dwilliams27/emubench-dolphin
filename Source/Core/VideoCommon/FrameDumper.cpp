@@ -138,7 +138,7 @@ void FrameDumper::FlushFrameDump()
     const u32 height = output->GetConfig().height;
     const int stride = static_cast<int>(output->GetMappedStride());
 
-    // [dmcp] For OpenGL (lower-left origin), flip pixel rows vertically
+    // [emubench] For OpenGL (lower-left origin), flip pixel rows vertically
     // OpenGL stores framebuffers bottom-up, but PNGs expect top-down data
     if (g_backend_info.bUsesLowerLeftOrigin)
     {
@@ -259,7 +259,7 @@ void FrameDumper::FrameDumpThreadFunc()
       if (DumpFrameToPNG(frame, m_screenshot_name))
         OSD::AddMessage("Screenshot saved to " + m_screenshot_name);
 
-      // [dmcp]
+      // [emubench]
       if (m_external_screenshot_completed) {
         m_external_screenshot_completed->Set();
         m_external_screenshot_completed = nullptr;
@@ -382,7 +382,7 @@ void FrameDumper::SaveScreenshot(std::string filename)
   m_screenshot_request.Set();
 }
 
-// [dmcp]
+// [emubench]
 void FrameDumper::SaveScreenshotWithCallback(std::string filename, Common::Event* completion_event) {
   std::lock_guard<std::mutex> lk(m_screenshot_lock);
   m_screenshot_name = std::move(filename);
@@ -392,9 +392,17 @@ void FrameDumper::SaveScreenshotWithCallback(std::string filename, Common::Event
 
 bool FrameDumper::IsFrameDumping() const
 {
-  // [dmcp]
+  // [emubench]
   // TODO(perf): Fix m_screenshot_request timing, hackey
   return true;
+}
+
+// [emubench] Check if there's a pending screenshot request
+// Used for early exit in ProcessFrameDumping to avoid running expensive
+// screenshot rendering on every frame when no screenshot is actually needed
+bool FrameDumper::HasPendingScreenshot() const
+{
+  return m_screenshot_request.IsSet() || m_external_screenshot_completed != nullptr;
 }
 
 int FrameDumper::GetRequiredResolutionLeastCommonMultiple() const

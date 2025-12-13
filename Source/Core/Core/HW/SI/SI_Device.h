@@ -104,7 +104,7 @@ enum SIDevices : int
   SIDEVICE_GC_GBA_EMULATED,
   // Not a valid device. Used for checking whether enum values are valid.
   SIDEVICE_COUNT,
-  // [dmcp]
+  // [emubench]
   SIDEVICE_GC_IPC,
 };
 

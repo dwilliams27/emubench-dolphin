@@ -28,7 +28,7 @@ constexpr int AUDIO_VOLUME_MAX = 100;
 
 static std::unique_ptr<SoundStream> CreateSoundStreamForBackend(std::string_view backend)
 {
-  // [dmcp]
+  // [emubench]
   return std::make_unique<NullSound>();
 }
 

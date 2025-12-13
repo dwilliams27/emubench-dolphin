@@ -376,7 +376,7 @@
         <item>@string/gcpad_dance_mat</item>
         <item>@string/gcpad_taru_konga</item>
         <item>@string/gcpad_gc_adapter</item>
-        <!-- [dmcp] -->
+        <!-- [emubench] -->
         <item>@string/gcpad_ipc</item>
     </string-array>
     <integer-array name="gcpadTypeValues">

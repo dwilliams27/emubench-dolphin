@@ -5,6 +5,7 @@
 
 #include "Common/ChunkFile.h"
 #include "Core/Config/GraphicsSettings.h"
+#include "Core/Config/MainSettings.h"
 #include "Core/CoreTiming.h"
 #include "Core/HW/VideoInterface.h"
 #include "Core/Host.h"
@@ -226,6 +227,15 @@ void Presenter::ImmediateSwap(u32 xfb_addr, u32 fb_width, u32 fb_stride, u32 fb_
 
 void Presenter::ProcessFrameDumping(u64 ticks) const
 {
+  // [emubench] Early exit if no actual screenshot is pending and not recording video.
+  // This fixes graphical glitches caused by running the expensive screenshot
+  // rendering pipeline on every frame even when no screenshot is needed.
+  if (!g_frame_dumper->HasPendingScreenshot() &&
+      !Config::Get(Config::MAIN_MOVIE_DUMP_FRAMES))
+  {
+    return;
+  }
+
   if (g_frame_dumper->IsFrameDumping() && m_xfb_entry)
   {
     MathUtil::Rectangle<int> target_rect;
@@ -282,7 +292,7 @@ void Presenter::ProcessFrameDumping(u64 ticks) const
     target_rect.right = width;
     target_rect.bottom = height;
 
-    // [dmcp] Create or verify screenshot texture/framebuffer for post-processing
+    // [emubench] Create or verify screenshot texture/framebuffer for post-processing
     // This ensures screenshots capture the output with shaders applied
     if (!m_screenshot_texture || m_screenshot_texture->GetWidth() != static_cast<u32>(width) ||
         m_screenshot_texture->GetHeight() != static_cast<u32>(height))
@@ -308,7 +318,7 @@ void Presenter::ProcessFrameDumping(u64 ticks) const
       }
     }
 
-    // [dmcp] Apply post-processing to screenshot texture
+    // [emubench] Apply post-processing to screenshot texture
     // Save current framebuffer, render XFB with post-processing to our screenshot texture,
     // then restore the previous framebuffer
     AbstractFramebuffer* const previous_framebuffer = g_gfx->GetCurrentFramebuffer();
@@ -318,12 +328,12 @@ void Presenter::ProcessFrameDumping(u64 ticks) const
     // Render the XFB texture with post-processing applied
     m_post_processor->BlitFromTexture(target_rect, m_xfb_rect, m_xfb_entry->texture.get());
 
-    // [dmcp] Ensure GPU completes rendering before we copy the texture
+    // [emubench] Ensure GPU completes rendering before we copy the texture
     g_gfx->Flush();
 
     g_gfx->SetFramebuffer(previous_framebuffer);
 
-    // [dmcp] Now dump from the post-processed screenshot texture instead of raw XFB
+    // [emubench] Now dump from the post-processed screenshot texture instead of raw XFB
     // Pass flag to indicate if we need to flip rows for OpenGL
     g_frame_dumper->DumpCurrentFrame(m_screenshot_texture.get(), target_rect, target_rect, ticks,
                                      m_frame_count);

@@ -138,7 +138,7 @@ void VideoConfig::Refresh()
   iMaxAnisotropy = Config::Get(Config::GFX_ENHANCE_MAX_ANISOTROPY);
   output_resampling_mode = Config::Get(Config::GFX_ENHANCE_OUTPUT_RESAMPLING);
   
-  // [dmcp]
+  // [emubench]
   // Check for USE_SHADER environment variable first, fall back to config
   const char* env_shader = std::getenv("USE_SHADER");
   if (env_shader && env_shader[0] != '\0')

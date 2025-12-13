@@ -48,7 +48,7 @@ enum class LogType : int
   IOS_WC24,
   IOS_WFS,
   IOS_WIIMOTE,
-  // [dmcp]
+  // [emubench]
   IPC,
   MASTER_LOG,
   MEMMAP,

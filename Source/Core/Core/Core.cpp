@@ -91,7 +91,7 @@
 #include "VideoCommon/VideoBackendBase.h"
 #include "VideoCommon/VideoEvents.h"
 
-// [dmcp]
+// [emubench]
 #include "IPC/HTTPServer.h"
 #include "IPC/MemWatcher.h"
 
@@ -155,7 +155,7 @@ void FrameUpdateOnCPUThread()
 
 void OnFrameEnd(Core::System& system)
 {
-  // [dmcp]
+  // [emubench]
   ASSERT(IsCPUThread());
   const CPUThreadGuard guard(system);
 
@@ -733,7 +733,7 @@ State GetState(Core::System& system)
     return state;
 }
 
-// [dmcp]
+// [emubench]
 std::string GenerateScreenshotFolderPath()
 {
   std::string path = File::GetUserPath(D_SCREENSHOTS_IDX) + DIR_SEP_CHR;
@@ -780,7 +780,7 @@ void SaveScreenShot(std::string_view name)
   g_frame_dumper->SaveScreenshot(fmt::format("{}{}.png", GenerateScreenshotFolderPath(), name));
 }
 
-// [dmcp]
+// [emubench]
 Common::Event& SaveScreenShotWithCallback(std::string_view name) {
   NOTICE_LOG_FMT(CORE, "IPC: Host thread screenshot req {}", name);
   const Core::CPUThreadGuard guard(Core::System::GetInstance());

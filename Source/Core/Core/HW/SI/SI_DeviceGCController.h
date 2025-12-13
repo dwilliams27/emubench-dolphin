@@ -103,7 +103,7 @@ public:
       << 16;
 };
 
-// [dmcp] IPC controller
+// [emubench] IPC controller
 class CSIDevice_IPC final : public CSIDevice_GCController
 {
 public:

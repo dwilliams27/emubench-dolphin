@@ -7,7 +7,7 @@ add_subdirectory(UICommon)
 add_subdirectory(VideoCommon)
 add_subdirectory(VideoBackends)
 
-# [dmcp]
+# [emubench]
 add_subdirectory(IPC)
 
 if(ENABLE_NOGUI)

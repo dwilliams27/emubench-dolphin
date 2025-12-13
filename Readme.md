@@ -2,7 +2,7 @@
 
 This fork of Dolphin exposes an HTTP server over `8080` to be consumed by [emubench-dolphin-serv](https://github.com/dwilliams27/emubench-dolphin-serv) and [emubench-ui](https://github.com/dwilliams27/emubench-dolphin-ui), exposing tools using MCP to allow agents to play Gamecube games.
 
-All changes in this fork from base dolphin are prefixed with a comment `[dmcp]`.
+All changes in this fork from base dolphin are prefixed with a comment `[emubench]`.
 
 ### /api/controller/:port
 

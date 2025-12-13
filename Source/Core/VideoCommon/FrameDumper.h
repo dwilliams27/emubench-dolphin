@@ -34,15 +34,17 @@ public:
 
   void SaveScreenshot(std::string filename);
 
-  // [dmcp]
+  // [emubench]
   void SaveScreenshotWithCallback(std::string filename, Common::Event* completion_event);
 
   bool IsFrameDumping() const;
+  // [emubench] Check if there's a pending screenshot request (for early exit in ProcessFrameDumping)
+  bool HasPendingScreenshot() const;
   int GetRequiredResolutionLeastCommonMultiple() const;
 
   void DoState(PointerWrap& p);
 
-  // [dmcp]
+  // [emubench]
   // Used to kick frame dump thread.
   Common::Event m_frame_dump_start;
 
@@ -107,10 +109,10 @@ private:
 
   Common::EventHook m_frame_end_handle;
 
-  // [dmcp]
+  // [emubench]
   Common::Event* m_external_screenshot_completed = nullptr;
 
-  // [dmcp] Buffer for flipping pixel rows in OpenGL (lower-left origin backends)
+  // [emubench] Buffer for flipping pixel rows in OpenGL (lower-left origin backends)
   std::vector<u8> m_flipped_frame_buffer;
 };
 

@@ -430,7 +430,7 @@ PRIVATE
   uicommon
   imgui
   implot
-  # [dmcp]
+  # [emubench]
   nlohmann_json
 )
 

@@ -38,7 +38,7 @@ class FileLogListener : public LogListener
 public:
   FileLogListener(const std::string& filename)
   {
-    // [dmcp] Why
+    // [emubench] Why
     File::CreateFullPath(filename);
     File::OpenFStream(m_logfile, filename, std::ios::app);
     SetEnable(true);
@@ -52,7 +52,7 @@ public:
       return;
 
     std::lock_guard<std::mutex> lk(m_log_lock);
-    // [dmcp]
+    // [emubench]
     auto now = std::chrono::steady_clock::now();
     
     // Close and open file to ensure its pushed up to bucket frequently
@@ -148,8 +148,8 @@ LogManager::LogManager()
   m_log[LogType::IOS_WC24] = {"IOS_WC24", "IOS - WiiConnect24"};
   m_log[LogType::IOS_WFS] = {"IOS_WFS", "IOS - WFS"};
   m_log[LogType::IOS_WIIMOTE] = {"IOS_WIIMOTE", "IOS - Wii Remote"};
-  // [dmcp]
-  m_log[LogType::IPC] = {"IPC", "[dmcp] Inter-Process Communication"};
+  // [emubench]
+  m_log[LogType::IPC] = {"IPC", "[emubench] Inter-Process Communication"};
   m_log[LogType::MASTER_LOG] = {"MASTER", "Master Log"};
   m_log[LogType::MEMCARD_MANAGER] = {"MemCard Manager", "Memory Card Manager"};
   m_log[LogType::MEMMAP] = {"MI", "Memory Interface & Memory Map"};
@@ -176,7 +176,7 @@ LogManager::LogManager()
   LogLevel verbosity = Config::Get(LOGGER_VERBOSITY);
 
   SetLogLevel(verbosity);
-  // [dmcp] Always enable file and console listeners
+  // [emubench] Always enable file and console listeners
   EnableListener(LogListener::FILE_LISTENER, true);
   EnableListener(LogListener::CONSOLE_LISTENER, true);
   EnableListener(LogListener::LOG_WINDOW_LISTENER, Config::Get(LOGGER_WRITE_TO_WINDOW));
@@ -187,7 +187,7 @@ LogManager::LogManager()
         Config::Info<bool>{{Config::System::Logger, "Logs", container.m_short_name}, false});
   }
 
-  // [dmcp] Always turn on Core and IPC
+  // [emubench] Always turn on Core and IPC
   SetEnable(LogType::CORE, true);
   SetEnable(LogType::IPC, true);
 

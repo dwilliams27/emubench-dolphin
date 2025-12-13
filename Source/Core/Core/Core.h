@@ -15,7 +15,7 @@
 #include <string_view>
 
 #include "Common/CommonTypes.h"
-// [dmcp]
+// [emubench]
 #include "Common/Event.h"
 
 struct BootParameters;
@@ -153,7 +153,7 @@ State GetState(Core::System& system);
 void SaveScreenShot();
 void SaveScreenShot(std::string_view name);
 
-// [dmcp]
+// [emubench]
 Common::Event& SaveScreenShotWithCallback(std::string_view name);
 std::string GenerateScreenshotFolderPath();
 

@@ -25,7 +25,7 @@ bool IsInitialized();
 
 InputConfig* GetConfig();
 
-// [dmcp]
+// [emubench]
 
 /**
  * @brief Queues a controller input state to be active for a specific number of frames.
