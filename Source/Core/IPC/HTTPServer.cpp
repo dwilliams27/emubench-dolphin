@@ -83,7 +83,7 @@ void HTTPServer::ServerThread(int port) {
 		// If it's a valid number format, convert it safely
 		if (valid_number && !port_str.empty()) {
 			port = std::atoi(port_str.c_str());
-			
+
 			// Check if port is in valid range (0-3)
 			if (port < 0 || port > 3) {
 				res.status = 400;
@@ -95,7 +95,7 @@ void HTTPServer::ServerThread(int port) {
 			res.set_content("{\"error\":\"Invalid port parameter\"}", "application/json");
 			return;
 		}
-		
+
 		std::optional<nlohmann::json_abi_v3_12_0::json> json_data = ParseJson(req.body);
 		if (!json_data) {
 			res.status = 400;
@@ -109,35 +109,75 @@ void HTTPServer::ServerThread(int port) {
 			Core::SetState(system, Core::State::Running);
 		}
 
-		// Convert to ControllerInput structure
-		IPCControllerInput input = ParseIPCControllerInput(json_data);
-
-		// Convert to GCPadStatus and update Dolphin
-		GCPadStatus status = ConvertToGCPadStatus(input);
-		// Frames parameter is required and must be >= 5 for screenshot pipeline
-		constexpr uint32_t MINIMUM_FRAMES = 5;
+		constexpr uint32_t MINIMUM_FRAMES = 2;
 		constexpr uint32_t SCREENSHOT_PIPELINE_FRAMES = 2;
 
-		if (!json_data->contains("frames") || !(*json_data)["frames"].is_number_unsigned()) {
-			res.status = 400;
-			res.set_content("{\"error\":\"Missing or invalid 'frames' parameter\"}", "application/json");
-			return;
+		// [emubench] Detect if this is a sequence (array) format or single input format
+		bool is_sequence = json_data->contains("inputs") && (*json_data)["inputs"].is_array();
+
+		if (is_sequence) {
+			// [emubench] Array format: parse and process multiple inputs sequentially
+			std::vector<IPCControllerInput> inputs = ParseIPCControllerInputSequence(*json_data);
+
+			if (inputs.empty()) {
+				res.status = 400;
+				res.set_content("{\"error\":\"Empty or invalid 'inputs' array\"}", "application/json");
+				return;
+			}
+
+			// Validate all inputs have valid frame counts
+			for (size_t i = 0; i < inputs.size(); ++i) {
+				if (inputs[i].frames < MINIMUM_FRAMES) {
+					res.status = 400;
+					res.set_content("{\"error\":\"Each input must have frames >= 2. Input " + std::to_string(i) + " has frames=" + std::to_string(inputs[i].frames) + "\"}", "application/json");
+					return;
+				}
+			}
+
+			NOTICE_LOG_FMT(CORE, "IPC: Processing input sequence with {} inputs for pad {}", inputs.size(), port);
+
+			// Process each input sequentially
+			for (size_t i = 0; i < inputs.size(); ++i) {
+				const IPCControllerInput& input = inputs[i];
+				GCPadStatus status = ConvertToGCPadStatus(input);
+				uint32_t frame_count = input.frames;
+
+				Pad::QueueTimedInput(port, status, frame_count);
+				NOTICE_LOG_FMT(CORE, "IPC: Queued input {} of {} for pad {} for {} frames", i + 1, inputs.size(), port, frame_count);
+
+				if (i < inputs.size() - 1) {
+					// Not the last input: wait for full duration then queue next
+					HTTPServer::WaitXFrames(frame_count);
+				} else {
+					// Last input: wait until SCREENSHOT_PIPELINE_FRAMES before end
+					uint32_t frames_before_screenshot = frame_count - SCREENSHOT_PIPELINE_FRAMES;
+					HTTPServer::WaitXFrames(frames_before_screenshot);
+				}
+			}
+		} else {
+			// [emubench] Single input format (backwards compatible)
+			IPCControllerInput input = ParseIPCControllerInput(*json_data);
+			GCPadStatus status = ConvertToGCPadStatus(input);
+
+			if (!json_data->contains("frames") || !(*json_data)["frames"].is_number_unsigned()) {
+				res.status = 400;
+				res.set_content("{\"error\":\"Missing or invalid 'frames' parameter\"}", "application/json");
+				return;
+			}
+
+			uint32_t frame_count = (*json_data)["frames"].get<uint32_t>();
+			if (frame_count < MINIMUM_FRAMES) {
+				res.status = 400;
+				res.set_content("{\"error\":\"frames must be >= 2 for screenshot pipeline\"}", "application/json");
+				return;
+			}
+
+			Pad::QueueTimedInput(port, status, frame_count);
+			NOTICE_LOG_FMT(CORE, "IPC: Queued timed input for pad {} for {} frames", port, frame_count);
+
+			uint32_t frames_before_screenshot = frame_count - SCREENSHOT_PIPELINE_FRAMES;
+			HTTPServer::WaitXFrames(frames_before_screenshot);
 		}
-
-		uint32_t frame_count = (*json_data)["frames"].get<uint32_t>();
-		if (frame_count < MINIMUM_FRAMES) {
-			res.status = 400;
-			res.set_content("{\"error\":\"frames must be >= 5 for screenshot pipeline\"}", "application/json");
-			return;
-		}
-
-		// Queue the input to be active for the full duration
-		Pad::QueueTimedInput(port, status, frame_count);
-		NOTICE_LOG_FMT(CORE, "IPC: Queued timed input for pad {} for {} frames", port, frame_count);
-
-		// Wait until SCREENSHOT_PIPELINE_FRAMES before the end, then set up screenshot
-		uint32_t frames_before_screenshot = frame_count - SCREENSHOT_PIPELINE_FRAMES;
-		HTTPServer::WaitXFrames(frames_before_screenshot);
 
 		// Set up screenshot request while still running (don't kick thread directly)
 		std::string screenshot_name = std::to_string(m_screenshot_count++);

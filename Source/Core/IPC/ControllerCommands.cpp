@@ -90,8 +90,39 @@ IPCControllerInput ParseIPCControllerInput(const nlohmann::json& j) {
   NOTICE_LOG_FMT(CORE, "Parsed IPCControllerInput: connected={}, frames{}, buttons(a={}, b={}, x={}, y={}, z={}, start={}, up={}, down={}, left={}, right={}, l={}, r={}), mainStick(x={}, y={}), cStick(x={}, y={}), triggers(l={}, r={})",
                  input.connected, input.frames, input.buttons.a, input.buttons.b, input.buttons.x, input.buttons.y, input.buttons.z, input.buttons.start, input.buttons.up, input.buttons.down, input.buttons.left, input.buttons.right, input.buttons.l, input.buttons.r,
                  input.mainStick.x, input.mainStick.y, input.cStick.x, input.cStick.y, input.triggers.l, input.triggers.r);
-  
+
   return input;
+}
+
+// [emubench] Parse array of controller inputs for multi-step sequences
+std::vector<IPCControllerInput> ParseIPCControllerInputSequence(const nlohmann::json& j) {
+  std::vector<IPCControllerInput> inputs;
+
+  if (!j.contains("inputs") || !j["inputs"].is_array()) {
+    NOTICE_LOG_FMT(CORE, "ParseIPCControllerInputSequence: missing or invalid 'inputs' array");
+    return inputs;
+  }
+
+  const auto& inputs_array = j["inputs"];
+  inputs.reserve(inputs_array.size());
+
+  for (size_t i = 0; i < inputs_array.size(); ++i) {
+    const auto& input_json = inputs_array[i];
+
+    // Parse the input using existing function
+    IPCControllerInput input = ParseIPCControllerInput(input_json);
+
+    // Parse frames for this input
+    if (input_json.contains("frames") && input_json["frames"].is_number_unsigned()) {
+      input.frames = input_json["frames"].get<uint32_t>();
+    }
+
+    inputs.push_back(input);
+    NOTICE_LOG_FMT(CORE, "ParseIPCControllerInputSequence: parsed input {} with {} frames", i, input.frames);
+  }
+
+  NOTICE_LOG_FMT(CORE, "ParseIPCControllerInputSequence: parsed {} inputs total", inputs.size());
+  return inputs;
 }
 
 GCPadStatus ConvertToGCPadStatus(const IPCControllerInput& input) {

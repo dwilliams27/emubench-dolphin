@@ -6,6 +6,7 @@
 
 #include <string>
 #include <cstdint>
+#include <vector>
 
 namespace IPC {
 
@@ -44,6 +45,7 @@ struct IPCControllerInput {
 };
 
 IPCControllerInput ParseIPCControllerInput(const nlohmann::json& j);
+std::vector<IPCControllerInput> ParseIPCControllerInputSequence(const nlohmann::json& j);
 GCPadStatus ConvertToGCPadStatus(const IPCControllerInput& input);
 
 } // Namespace IPC
