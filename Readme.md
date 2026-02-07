@@ -1,20 +1,8 @@
 # 🐬 emubench-dolphin
 
-This fork of Dolphin exposes an HTTP server over `8080` to be consumed by [emubench-dolphin-serv](https://github.com/dwilliams27/emubench-dolphin-serv) and [emubench-ui](https://github.com/dwilliams27/emubench-dolphin-ui), exposing tools using MCP to allow agents to play Gamecube games.
+Fork of Dolphin compatable with Emubench.com
 
-All changes in this fork from base dolphin are prefixed with a comment `[emubench]`.
-
-### /api/controller/:port
-
-Endpoint for pressing buttons, moving sticks, or pressing triggers for a specific amount of frames.
-
-### /api/screenshot
-
-Endpoint for getting raw screenshot of running game.
-
-### /api/emulation
-
-Endpoints for controlling different aspects of the running emulation; save state, load state, play, pause
+Writeup [here](https://dwilliams27.substack.com/p/benchmarks-are-hard-actually)
 
 ---
 
