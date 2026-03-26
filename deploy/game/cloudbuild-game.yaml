@@ -1,0 +1,28 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [
+      'build',
+      '-t', 'gcr.io/$PROJECT_ID/emubench-${_PLATFORM}-${_GAMEID_LOWER}:latest',
+      '-f', 'Dockerfile',
+      '--build-arg', 'GAME_ID=${_GAMEID_UPPER}',
+      '--build-arg', 'GAME_PLATFORM=${_PLATFORM}',
+      '.'
+    ]
+    timeout: '3600s'  # 1 hour timeout for the build
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/emubench-${_PLATFORM}-${_GAMEID_LOWER}:latest']
+
+options:
+  machineType: 'E2_HIGHCPU_8'  # 8 vCPU, 8GB RAM
+  diskSizeGb: 100
+
+timeout: '7200s'  # 2 hours
+
+images:
+  - 'gcr.io/$PROJECT_ID/emubench-${_PLATFORM}-${_GAMEID_LOWER}:latest'
+
+substitutions:
+  _PLATFORM: 'REPLACE_ME'
+  _GAMEID_LOWER: 'REPLACE_ME'
+  _GAMEID_UPPER: 'REPLACE_ME'

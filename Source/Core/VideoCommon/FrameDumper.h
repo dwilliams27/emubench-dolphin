@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include <vector>
+
 #include "Common/CommonTypes.h"
 #include "Common/Event.h"
 #include "Common/Flag.h"
@@ -32,10 +34,19 @@ public:
 
   void SaveScreenshot(std::string filename);
 
+  // [emubench]
+  void SaveScreenshotWithCallback(std::string filename, Common::Event* completion_event);
+
   bool IsFrameDumping() const;
+  // [emubench] Check if there's a pending screenshot request (for early exit in ProcessFrameDumping)
+  bool HasPendingScreenshot() const;
   int GetRequiredResolutionLeastCommonMultiple() const;
 
   void DoState(PointerWrap& p);
+
+  // [emubench]
+  // Used to kick frame dump thread.
+  Common::Event m_frame_dump_start;
 
 private:
   // NOTE: The methods below are called on the framedumping thread.
@@ -63,9 +74,6 @@ private:
 
   std::thread m_frame_dump_thread;
   Common::Flag m_frame_dump_thread_running;
-
-  // Used to kick frame dump thread.
-  Common::Event m_frame_dump_start;
 
   // Set by frame dump thread on frame completion.
   Common::Event m_frame_dump_done;
@@ -100,6 +108,12 @@ private:
   std::string m_screenshot_name;
 
   Common::EventHook m_frame_end_handle;
+
+  // [emubench]
+  Common::Event* m_external_screenshot_completed = nullptr;
+
+  // [emubench] Buffer for flipping pixel rows in OpenGL (lower-left origin backends)
+  std::vector<u8> m_flipped_frame_buffer;
 };
 
 extern std::unique_ptr<FrameDumper> g_frame_dumper;

@@ -430,6 +430,8 @@ PRIVATE
   uicommon
   imgui
   implot
+  # [emubench]
+  nlohmann_json
 )
 
 if (WIN32)

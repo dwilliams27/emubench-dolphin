@@ -1,3 +1,23 @@
+# 🐬 emubench-dolphin
+
+Fork of Dolphin compatable with Emubench.
+
+[emubench.com](http://emubench.com)
+
+Experimentation tool for benchmarking AI models against video games.
+
+Writeup [here](https://dwilliams27.substack.com/p/benchmarks-are-hard-actually)
+
+<img width="1456" height="775" alt="image" src="https://github.com/user-attachments/assets/960e5436-043f-4159-8818-ac45ecfae66b" />
+
+<img width="1456" height="773" alt="image" src="https://github.com/user-attachments/assets/cba768c4-ea6c-4530-a8ca-a454e178a64f" />
+
+<img width="1456" height="986" alt="image" src="https://github.com/user-attachments/assets/b0fa8da3-cc36-4dd0-a0e6-9c63c5c24359" />
+
+<img width="1021" height="682" alt="image" src="https://github.com/user-attachments/assets/7d196e88-1113-402b-a1fc-82e06eb6ef18" />
+
+---
+
 # Dolphin - A GameCube and Wii Emulator
 
 [Homepage](https://dolphin-emu.org/) | [Project Site](https://github.com/dolphin-emu/dolphin) | [Buildbot](https://dolphin.ci/) | [Forums](https://forums.dolphin-emu.org/) | [Wiki](https://wiki.dolphin-emu.org/) | [GitHub Wiki](https://github.com/dolphin-emu/dolphin/wiki) | [Issue Tracker](https://bugs.dolphin-emu.org/projects/emulator/issues) | [Coding Style](https://github.com/dolphin-emu/dolphin/blob/master/Contributing.md) | [Transifex Page](https://app.transifex.com/dolphinemu/dolphin-emu/dashboard/) | [Analytics](https://mon.dolphin-emu.org/)

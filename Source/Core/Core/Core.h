@@ -15,6 +15,8 @@
 #include <string_view>
 
 #include "Common/CommonTypes.h"
+// [emubench]
+#include "Common/Event.h"
 
 struct BootParameters;
 struct WindowSystemInfo;
@@ -150,6 +152,10 @@ State GetState(Core::System& system);
 
 void SaveScreenShot();
 void SaveScreenShot(std::string_view name);
+
+// [emubench]
+Common::Event& SaveScreenShotWithCallback(std::string_view name);
+std::string GenerateScreenshotFolderPath();
 
 // This displays messages in a user-visible way.
 void DisplayMessage(std::string message, int time_in_ms);

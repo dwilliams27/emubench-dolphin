@@ -3,6 +3,8 @@
 
 #include "VideoCommon/FrameDumper.h"
 
+#include <cstring>
+
 #include "Common/Assert.h"
 #include "Common/FileUtil.h"
 #include "Common/Image.h"
@@ -16,6 +18,7 @@
 #include "VideoCommon/AbstractTexture.h"
 #include "VideoCommon/OnScreenDisplay.h"
 #include "VideoCommon/Present.h"
+#include "VideoCommon/VideoConfig.h"
 
 // The video encoder needs the image to be a multiple of x samples.
 static constexpr int VIDEO_ENCODER_LCM = 4;
@@ -130,8 +133,35 @@ void FrameDumper::FlushFrameDump()
   output->Flush();
   if (output->Map())
   {
-    DumpFrameData(reinterpret_cast<u8*>(output->GetMappedPointer()), output->GetConfig().width,
-                  output->GetConfig().height, static_cast<int>(output->GetMappedStride()));
+    u8* data = reinterpret_cast<u8*>(output->GetMappedPointer());
+    const u32 width = output->GetConfig().width;
+    const u32 height = output->GetConfig().height;
+    const int stride = static_cast<int>(output->GetMappedStride());
+
+    // [emubench] For OpenGL (lower-left origin), flip pixel rows vertically
+    // OpenGL stores framebuffers bottom-up, but PNGs expect top-down data
+    if (g_backend_info.bUsesLowerLeftOrigin)
+    {
+      // Allocate buffer if needed
+      const size_t row_size = stride;
+      const size_t buffer_size = row_size * height;
+      if (m_flipped_frame_buffer.size() < buffer_size)
+        m_flipped_frame_buffer.resize(buffer_size);
+
+      // Flip rows: copy from bottom to top
+      for (u32 y = 0; y < height; ++y)
+      {
+        const u8* src_row = data + (height - 1 - y) * stride;
+        u8* dst_row = m_flipped_frame_buffer.data() + y * stride;
+        std::memcpy(dst_row, src_row, row_size);
+      }
+
+      DumpFrameData(m_flipped_frame_buffer.data(), width, height, stride);
+    }
+    else
+    {
+      DumpFrameData(data, width, height, stride);
+    }
   }
   else
   {
@@ -228,6 +258,13 @@ void FrameDumper::FrameDumpThreadFunc()
 
       if (DumpFrameToPNG(frame, m_screenshot_name))
         OSD::AddMessage("Screenshot saved to " + m_screenshot_name);
+
+      // [emubench]
+      if (m_external_screenshot_completed) {
+        m_external_screenshot_completed->Set();
+        m_external_screenshot_completed = nullptr;
+        NOTICE_LOG_FMT(CORE, "IPC: Queued screenshot saved successfully");
+      }
 
       // Reset settings
       m_screenshot_name.clear();
@@ -345,15 +382,27 @@ void FrameDumper::SaveScreenshot(std::string filename)
   m_screenshot_request.Set();
 }
 
+// [emubench]
+void FrameDumper::SaveScreenshotWithCallback(std::string filename, Common::Event* completion_event) {
+  std::lock_guard<std::mutex> lk(m_screenshot_lock);
+  m_screenshot_name = std::move(filename);
+  m_external_screenshot_completed = completion_event;
+  m_screenshot_request.Set();
+}
+
 bool FrameDumper::IsFrameDumping() const
 {
-  if (m_screenshot_request.IsSet())
-    return true;
+  // [emubench]
+  // TODO(perf): Fix m_screenshot_request timing, hackey
+  return true;
+}
 
-  if (Config::Get(Config::MAIN_MOVIE_DUMP_FRAMES))
-    return true;
-
-  return false;
+// [emubench] Check if there's a pending screenshot request
+// Used for early exit in ProcessFrameDumping to avoid running expensive
+// screenshot rendering on every frame when no screenshot is actually needed
+bool FrameDumper::HasPendingScreenshot() const
+{
+  return m_screenshot_request.IsSet() || m_external_screenshot_completed != nullptr;
 }
 
 int FrameDumper::GetRequiredResolutionLeastCommonMultiple() const

@@ -91,6 +91,10 @@
 #include "VideoCommon/VideoBackendBase.h"
 #include "VideoCommon/VideoEvents.h"
 
+// [emubench]
+#include "IPC/HTTPServer.h"
+#include "IPC/MemWatcher.h"
+
 namespace Core
 {
 static bool s_wants_determinism;
@@ -151,6 +155,11 @@ void FrameUpdateOnCPUThread()
 
 void OnFrameEnd(Core::System& system)
 {
+  // [emubench]
+  ASSERT(IsCPUThread());
+  const CPUThreadGuard guard(system);
+
+  IPC::MemWatcher::GetInstance().Step(guard);
 #ifdef USE_MEMORYWATCHER
   if (s_memory_watcher)
   {
@@ -253,6 +262,7 @@ bool Init(Core::System& system, std::unique_ptr<BootParameters> boot, const Wind
   // Start the emu thread
   s_state.store(State::Starting);
   s_emu_thread = std::thread(EmuThread, std::ref(system), std::move(boot), prepared_wsi);
+
   return true;
 }
 
@@ -723,10 +733,10 @@ State GetState(Core::System& system)
     return state;
 }
 
-static std::string GenerateScreenshotFolderPath()
+// [emubench]
+std::string GenerateScreenshotFolderPath()
 {
-  const std::string& gameId = SConfig::GetInstance().GetGameID();
-  std::string path = File::GetUserPath(D_SCREENSHOTS_IDX) + gameId + DIR_SEP_CHR;
+  std::string path = File::GetUserPath(D_SCREENSHOTS_IDX) + DIR_SEP_CHR;
 
   if (!File::CreateFullPath(path))
   {
@@ -768,6 +778,23 @@ void SaveScreenShot(std::string_view name)
 {
   const Core::CPUThreadGuard guard(Core::System::GetInstance());
   g_frame_dumper->SaveScreenshot(fmt::format("{}{}.png", GenerateScreenshotFolderPath(), name));
+}
+
+// [emubench]
+Common::Event& SaveScreenShotWithCallback(std::string_view name) {
+  NOTICE_LOG_FMT(CORE, "IPC: Host thread screenshot req {}", name);
+  const Core::CPUThreadGuard guard(Core::System::GetInstance());
+  
+  // Set up a wait event that matches what's in the FrameDumper
+  static thread_local Common::Event completion_event;
+  completion_event.Reset();
+  
+  g_frame_dumper->SaveScreenshotWithCallback(
+    fmt::format("{}{}.png", GenerateScreenshotFolderPath(), name),
+    &completion_event);
+  
+  NOTICE_LOG_FMT(CORE, "IPC: Queued screenshot request to {}", name);
+  return completion_event;
 }
 
 static bool PauseAndLock(Core::System& system, bool do_lock, bool unpause_on_unlock)
